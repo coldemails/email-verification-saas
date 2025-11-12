@@ -1,0 +1,253 @@
+# Email Verification SaaS - Architecture Diagram
+
+## System Architecture
+
+┌─────────────────────────────────────────────────────────────────┐
+│                        YOUR MAC (Development)                    │
+│                                                                  │
+│  ┌──────────────┐           ┌──────────────┐                   │
+│  │   Frontend   │           │   Backend    │                   │
+│  │   Next.js    │◄────────►│  Express.js  │                   │
+│  │ Port: 3000   │   HTTP    │ Port: 3001   │                   │
+│  └──────────────┘           └──────┬───────┘                   │
+│                                     │                            │
+│                                     ▼                            │
+│                         ┌──────────────────┐                    │
+│                         │  Docker Desktop  │                    │
+│                         ├──────────────────┤                    │
+│                         │   PostgreSQL     │                    │
+│                         │   Port: 5432     │                    │
+│                         ├──────────────────┤                    │
+│                         │     Redis        │                    │
+│                         │   Port: 6379     │                    │
+│                         └──────────────────┘                    │
+└─────────────────────────────────────────────────────────────────┘
+
+## Data Flow
+
+1. User uploads CSV file
+   └─> Frontend sends to Backend API
+
+2. Backend processes upload
+   └─> Stores file in S3/Spaces (future)
+   └─> Creates verification job in PostgreSQL
+   └─> Pushes job to Redis queue (Bull)
+
+3. Worker processes job
+   └─> Pulls emails from queue
+   └─> Verifies via SMTP (through proxy)
+   └─> Stores results in PostgreSQL
+   └─> Updates progress via Socket.IO
+
+4. User sees real-time progress
+   └─> Socket.IO pushes updates to frontend
+   └─> Progress bar updates live
+
+5. Job completes
+   └─> Results stored in PostgreSQL
+   └─> Results file stored in S3/Spaces
+   └─> User can download results
+
+## Tech Stack Map
+
+Frontend (Next.js)
+├── React 18
+├── TypeScript
+├── Tailwind CSS
+├── TanStack Query (data fetching)
+├── Zustand (state management)
+└── Socket.IO Client (real-time)
+
+Backend (Node.js)
+├── Express.js (web server)
+├── TypeScript
+├── Prisma (database ORM)
+├── Bull (queue system)
+├── Socket.IO (real-time)
+├── Winston (logging)
+├── JWT (authentication)
+└── Stripe (payments)
+
+Database (PostgreSQL)
+├── Users
+├── VerificationJobs
+├── VerificationResults
+├── Transactions
+├── ApiKeys
+└── SystemMetrics
+
+Queue (Redis + Bull)
+├── Job queue
+├── Progress tracking
+└── Result caching
+
+## File Structure
+
+email-verification-saas/
+│
+├── backend/                 # Node.js + Express API
+│   ├── src/
+│   │   ├── config/         # Database, Redis config
+│   │   ├── routes/         # API endpoints
+│   │   ├── controllers/    # Request handlers
+│   │   ├── services/       # Business logic
+│   │   │   ├── email-verifier.service.ts  (TO BUILD)
+│   │   │   ├── proxy.service.ts          (TO BUILD)
+│   │   │   ├── storage.service.ts        (TO BUILD)
+│   │   │   └── stripe.service.ts         (TO BUILD)
+│   │   ├── workers/        # Background jobs
+│   │   │   └── email-verification-worker.ts (TO BUILD)
+│   │   ├── middleware/     # Auth, validation
+│   │   └── utils/          # Helpers
+│   └── prisma/
+│       └── schema.prisma   # Database schema (DONE ✅)
+│
+├── frontend/               # Next.js 14 app
+│   └── src/
+│       ├── app/           # Pages (App Router)
+│       │   ├── page.tsx              (DONE ✅)
+│       │   ├── login/page.tsx        (TO BUILD)
+│       │   ├── register/page.tsx     (TO BUILD)
+│       │   └── dashboard/
+│       │       ├── page.tsx          (TO BUILD)
+│       │       ├── upload/page.tsx   (TO BUILD)
+│       │       └── jobs/page.tsx     (TO BUILD)
+│       ├── components/    # React components (TO BUILD)
+│       └── lib/          # Utils (TO BUILD)
+│
+└── docker-compose.yml     # PostgreSQL + Redis (DONE ✅)
+
+## Development Workflow
+
+┌─────────────────────────────────────────────────────────┐
+│ 1. Developer writes code in VS Code                     │
+│                                                          │
+│ 2. Backend (auto-reload with nodemon)                   │
+│    └─> Saves file                                       │
+│    └─> Server restarts automatically                    │
+│                                                          │
+│ 3. Frontend (auto-reload with Next.js)                  │
+│    └─> Saves file                                       │
+│    └─> Browser refreshes automatically                  │
+│                                                          │
+│ 4. Database changes (Prisma)                            │
+│    └─> Edit schema.prisma                               │
+│    └─> Run: npm run prisma:migrate                      │
+│    └─> Database updates automatically                   │
+│                                                          │
+│ 5. Test in browser                                      │
+│    └─> http://localhost:3000 (Frontend)                 │
+│    └─> http://localhost:3001 (Backend API)              │
+└─────────────────────────────────────────────────────────┘
+
+## Production Architecture (Future)
+
+┌───────────────────────────────────────────────────────────┐
+│                     Cloudflare CDN                        │
+│                    (DDoS Protection)                      │
+└────────────────────┬──────────────────────────────────────┘
+                     │
+                     ▼
+┌────────────────────────────────────────────────────────────┐
+│              Hetzner Load Balancer ($6/mo)                 │
+└─────┬──────────────────────────────────────────────────────┘
+      │
+      ├─────► Worker 1 (CPX32) ◄─┐
+      ├─────► Worker 2 (CPX32) ◄─┤
+      ├─────► Worker 3 (CPX32) ◄─┤
+      ├─────► Worker 4 (CPX32) ◄─┼─ 9× Servers ($108/mo)
+      ├─────► Worker 5 (CPX32) ◄─┤
+      ├─────► Worker 6 (CPX32) ◄─┤
+      ├─────► Worker 7 (CPX32) ◄─┤
+      ├─────► Worker 8 (CPX32) ◄─┤
+      └─────► Worker 9 (CPX32) ◄─┘
+              │
+              ├─────► DigitalOcean PostgreSQL ($15/mo)
+              ├─────► DigitalOcean Redis ($15/mo)
+              ├─────► DigitalOcean Spaces ($5/mo)
+              └─────► Decodo Proxies ($65/mo)
+
+## Security Architecture
+
+┌─────────────────────────────────────────────────────────┐
+│ Layer 1: Network                                        │
+│ ├── Cloudflare DDoS protection                         │
+│ ├── HTTPS only (Let's Encrypt SSL)                     │
+│ └── Rate limiting (per IP)                             │
+│                                                          │
+│ Layer 2: Application                                    │
+│ ├── JWT authentication                                  │
+│ ├── Request validation (Zod)                           │
+│ ├── CORS configuration                                  │
+│ └── API rate limiting (per user)                       │
+│                                                          │
+│ Layer 3: Data                                           │
+│ ├── Encrypted database (at rest)                       │
+│ ├── Encrypted backups                                   │
+│ ├── Password hashing (bcrypt)                          │
+│ └── No sensitive logs                                   │
+│                                                          │
+│ Layer 4: Infrastructure                                 │
+│ ├── Private networks                                    │
+│ ├── Firewall rules                                      │
+│ ├── SSH key authentication                             │
+│ └── Regular security updates                            │
+└─────────────────────────────────────────────────────────┘
+
+## Monitoring Architecture
+
+┌─────────────────────────────────────────────────────────┐
+│ Application Monitoring                                  │
+│ ├── Sentry (Error tracking)                            │
+│ ├── Winston (Application logs)                         │
+│ └── Better Stack (Log aggregation)                     │
+│                                                          │
+│ Infrastructure Monitoring                               │
+│ ├── Uptime Robot (Uptime checks)                       │
+│ ├── Docker stats (Resource usage)                      │
+│ └── PostgreSQL metrics (Query performance)             │
+│                                                          │
+│ Business Metrics                                        │
+│ ├── Daily emails processed                             │
+│ ├── User signups                                        │
+│ ├── Revenue tracking                                    │
+│ └── Success rate by domain                             │
+└─────────────────────────────────────────────────────────┘
+
+## Cost Breakdown
+
+Monthly Infrastructure: $215.25
+├── Compute (9× CPX32)        $108.00 (50%)
+├── Proxies (25GB)            $65.00  (30%)
+├── Database (PostgreSQL)     $15.00  (7%)
+├── Cache (Redis)             $15.00  (7%)
+└── Other (LB, Storage, DNS)  $12.25  (6%)
+
+Break-even: 27 users × $7.99 = $215.00
+
+Target: 1,000 users × $7.99 = $7,990/month
+Profit: $7,990 - $215 = $7,775/month (97% margin)
+
+## Performance Targets
+
+Email Processing:
+├── Speed: 2,500/minute
+├── Success Rate: 85-95% (Gmail/Outlook)
+├── Timeout: 30 seconds per email
+└── Concurrent: 100 users simultaneously
+
+API Performance:
+├── Response Time: <200ms
+├── Uptime: 99.9%
+├── Rate Limit: 100 req/15min per user
+└── File Upload: Max 50MB
+
+Database Performance:
+├── Query Time: <100ms average
+├── Connections: 100 max
+└── Backup: Daily automated
+
+Queue Performance:
+├── Job Processing: Real-time
+├── Progress Updates: Every 1 second
+└── Max Queue Length: 1,000,000 emails

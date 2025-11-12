@@ -1,0 +1,148 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String            @id @default(uuid())
+  email            String            @unique
+  password         String            @map("password_hash")
+  name             String?
+  credits          Int               @default(0)
+  role             Role              @default(USER)
+  isActive         Boolean           @default(true)
+  emailVerified    Boolean           @default(false)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  apiKeys          ApiKey[]
+  transactions     Transaction[]
+  verificationJobs VerificationJob[]
+
+  @@index([email])
+  @@map("users")
+}
+
+model VerificationJob {
+  id              String               @id @default(uuid())
+  userId          String
+  fileName        String
+    serverFileName  String?              // ✅ Add this line
+  totalEmails     Int
+  processedEmails Int                  @default(0)
+  validEmails     Int                  @default(0)
+  invalidEmails   Int                  @default(0)
+  unknownEmails   Int                  @default(0)
+  status          JobStatus            @default(PENDING)
+  uploadedFileUrl String?
+  resultFileUrl   String?
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  user            User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  results         VerificationResult[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("verification_jobs")
+}
+
+model VerificationResult {
+  id            String          @id @default(uuid())
+  jobId         String
+  email         String
+  status        EmailStatus
+  reason        String?
+  smtpValid     Boolean?
+  smtpResponse  String?
+  hasMxRecord   Boolean?
+  mxRecords     String?
+  isCatchAll    Boolean?
+  isDisposable  Boolean?
+  isRoleAccount Boolean?
+  verifiedAt    DateTime        @default(now())
+  job           VerificationJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@index([email])
+  @@index([status])
+  @@map("verification_results")
+}
+
+model Transaction {
+  id              String            @id @default(uuid())
+  userId          String
+  amount          Decimal           @db.Decimal(10, 2)
+  credits         Int
+  status          TransactionStatus
+  stripePaymentId String?           @unique
+  stripeInvoiceId String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("transactions")
+}
+
+model ApiKey {
+  id         String    @id @default(uuid())
+  userId     String
+  key        String    @unique
+  name       String
+  isActive   Boolean   @default(true)
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([key])
+  @@map("api_keys")
+}
+
+model SystemMetric {
+  id                   String   @id @default(uuid())
+  date                 DateTime @default(now())
+  totalEmailsProcessed Int      @default(0)
+  totalUsers           Int      @default(0)
+  totalRevenue         Decimal  @db.Decimal(10, 2)
+  activeJobs           Int      @default(0)
+
+  @@index([date])
+  @@map("system_metrics")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum JobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum EmailStatus {
+  VALID
+  INVALID
+  UNKNOWN
+  RISKY
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
