@@ -1,11 +1,11 @@
 import express, { Express, Request, Response } from 'express';
 import { createServer } from 'http';
-import { Server } from 'socket.io';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes';
 import userRoutes from './routes/userRoutes';
 import verifyRoutes from './routes/verifyRoutes';
+import { initializeSocketIO } from './config/socket';
 
 dotenv.config();
 
@@ -16,32 +16,7 @@ const PORT = process.env.PORT || 4000;
 const httpServer = createServer(app);
 
 // Initialize Socket.io
-export const io = new Server(httpServer, {
-  cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-    credentials: true,
-    methods: ['GET', 'POST']
-  }
-});
-
-// Socket.io connection handling
-io.on('connection', (socket) => {
-  console.log(`✅ Client connected: ${socket.id}`);
-
-  socket.on('join-job', (jobId: string) => {
-    socket.join(`job-${jobId}`);
-    console.log(`📝 Socket ${socket.id} joined job room: ${jobId}`);
-  });
-
-  socket.on('leave-job', (jobId: string) => {
-    socket.leave(`job-${jobId}`);
-    console.log(`👋 Socket ${socket.id} left job room: ${jobId}`);
-  });
-
-  socket.on('disconnect', () => {
-    console.log(`❌ Client disconnected: ${socket.id}`);
-  });
-});
+export const io = initializeSocketIO(httpServer);
 
 // Middleware
 app.use(cors({
