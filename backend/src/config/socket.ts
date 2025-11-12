@@ -1,10 +1,12 @@
 import { Server as SocketServer } from 'socket.io';
-import { createServer } from 'http';
+import { createAdapter } from '@socket.io/redis-adapter';
+import { createClient } from 'redis';
 
-// This will be initialized by server.ts
 let io: SocketServer | null = null;
+let pubClient: any = null;
+let subClient: any = null;
 
-export const initializeSocketIO = (httpServer: any): SocketServer => {
+export const initializeSocketIO = async (httpServer: any): Promise<SocketServer> => {
   io = new SocketServer(httpServer, {
     cors: {
       origin: process.env.FRONTEND_URL || 'http://localhost:3000',
@@ -12,6 +14,25 @@ export const initializeSocketIO = (httpServer: any): SocketServer => {
       methods: ['GET', 'POST']
     }
   });
+
+  // Setup Redis adapter for cross-process communication
+  const redisHost = process.env.REDIS_HOST || 'localhost';
+  const redisPort = parseInt(process.env.REDIS_PORT || '6379');
+  
+  try {
+    pubClient = createClient({ 
+      socket: { host: redisHost, port: redisPort }
+    });
+    subClient = pubClient.duplicate();
+
+    await Promise.all([pubClient.connect(), subClient.connect()]);
+
+    io.adapter(createAdapter(pubClient, subClient));
+    
+    console.log('✅ Socket.IO Redis adapter connected');
+  } catch (error) {
+    console.warn('⚠️  Redis adapter failed, Socket.IO will work in single-process mode:', error);
+  }
 
   // Socket.io connection handling
   io.on('connection', (socket) => {

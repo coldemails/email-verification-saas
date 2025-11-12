@@ -15,8 +15,13 @@ const PORT = process.env.PORT || 4000;
 // Create HTTP server for Socket.io
 const httpServer = createServer(app);
 
-// Initialize Socket.io
-export const io = initializeSocketIO(httpServer);
+// Initialize Socket.io with Redis adapter
+let io: any;
+(async () => {
+  io = await initializeSocketIO(httpServer);
+})();
+
+export { io };
 
 // Middleware
 app.use(cors({

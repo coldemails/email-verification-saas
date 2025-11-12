@@ -20,6 +20,8 @@ interface Job {
   unknownEmails: number;
   status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
   uploadedAt: string;
+  startedAt?: string;      // ← ADD THIS
+  completedAt?: string;    // ← ADD THIS
 }
 
 interface JobProgress {
@@ -60,6 +62,17 @@ export default function DashboardPage() {
   const [showColumnSelector, setShowColumnSelector] = useState(false);
   const [step, setStep] = useState<'upload' | 'processing' | 'confirm'>('upload');
   const [detectedCount, setDetectedCount] = useState<number>(0);
+  // Real-time timer for processing jobs
+const [currentTime, setCurrentTime] = useState(Date.now());
+
+useEffect(() => {
+  // Update current time every second to refresh elapsed time calculations
+  const interval = setInterval(() => {
+    setCurrentTime(Date.now());
+  }, 1000);
+
+  return () => clearInterval(interval);
+}, []);
 
   // Fetch user data and jobs on mount
   useEffect(() => {
@@ -136,33 +149,34 @@ export default function DashboardPage() {
       );
     });
 
-    socket.on('job-completed', (data: any) => {
-      console.log('✅ Job completed:', data);
-      setActiveJobProgress((prev) => {
-        const updated = new Map(prev);
-        updated.delete(data.jobId);
-        return updated;
-      });
+   socket.on('job-completed', (data: any) => {
+  console.log('✅ Job completed:', data);
+  setActiveJobProgress((prev) => {
+    const updated = new Map(prev);
+    updated.delete(data.jobId);
+    return updated;
+  });
 
-      setJobs((prevJobs) =>
-        prevJobs.map((job) =>
-          job.id === data.jobId
-            ? {
-                ...job,
-                status: 'COMPLETED',
-                processedEmails: data.processedEmails,
-                validEmails: data.validEmails,
-                invalidEmails: data.invalidEmails,
-                unknownEmails: data.unknownEmails,
-              }
-            : job
-        )
-      );
+  setJobs((prevJobs) =>
+    prevJobs.map((job) =>
+      job.id === data.jobId
+        ? {
+            ...job,
+            status: 'COMPLETED',
+            processedEmails: data.processedEmails,
+            validEmails: data.validEmails,
+            invalidEmails: data.invalidEmails,
+            unknownEmails: data.unknownEmails,
+            startedAt: data.startedAt,      // ← ADD THIS
+            completedAt: data.completedAt,  // ← ADD THIS
+          }
+        : job
+    )
+  );
 
-      const token = localStorage.getItem('token');
-      if (token) fetchUserData(token);
-    });
-
+  const token = localStorage.getItem('token');
+  if (token) fetchUserData(token);
+});
     socket.on('job-failed', (data: any) => {
       console.error('❌ Job failed:', data);
       setActiveJobProgress((prev) => {
@@ -461,13 +475,23 @@ export default function DashboardPage() {
       year: 'numeric',
     });
   };
-
-  // Calculate processing time
-  const getProcessingTime = (job: Job) => {
-    if (job.status === 'PROCESSING' || job.status === 'PENDING') {
-      return 'In progress...';
+// Calculate processing time
+const getProcessingTime = (job: Job) => {
+  if (job.status === 'PROCESSING' || job.status === 'PENDING') {
+    // Calculate elapsed time for in-progress jobs
+    if (job.uploadedAt) {
+      const elapsed = Math.floor((Date.now() - new Date(job.uploadedAt).getTime()) / 1000);
+      const minutes = Math.floor(elapsed / 60);
+      const seconds = elapsed % 60;
+      return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
     }
-    const seconds = Math.floor(job.totalEmails / 10);
+    return 'Starting...';
+  }
+  
+  // For completed jobs, calculate actual time from startedAt to completedAt
+  if (job.startedAt && job.completedAt) {
+    const processingMs = new Date(job.completedAt).getTime() - new Date(job.startedAt).getTime();
+    const seconds = Math.floor(processingMs / 1000);
     const minutes = Math.floor(seconds / 60);
     
     if (minutes > 0) {
@@ -475,8 +499,10 @@ export default function DashboardPage() {
     } else {
       return `${seconds}s`;
     }
-  };
-
+  }
+  
+  return 'Unknown';
+};
   // Calculate stats
   const totalVerified = jobs.reduce((sum, job) => sum + job.processedEmails, 0);
   const totalValid = jobs.reduce((sum, job) => sum + job.validEmails, 0);

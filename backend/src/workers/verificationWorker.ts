@@ -24,15 +24,39 @@ console.log(`   - Concurrency: ${CONCURRENCY}`);
 console.log(`   - Timeout: ${VERIFICATION_TIMEOUT}ms`);
 
 /**
- * Helper to emit Socket.IO events safely
+ * Helper to emit Socket.IO events safely using Redis adapter
  */
-const emitSocketEvent = (event: string, data: any) => {
+const emitSocketEvent = async (event: string, data: any) => {
   try {
-    const io = getIO();
+    // Create a temporary Socket.IO client to emit via Redis
+    const { Server } = await import('socket.io');
+    const { createAdapter } = await import('@socket.io/redis-adapter');
+    const { createClient } = await import('redis');
+
+    const redisHost = process.env.REDIS_HOST || 'localhost';
+    const redisPort = parseInt(process.env.REDIS_PORT || '6379');
+
+    const pubClient = createClient({ 
+      socket: { host: redisHost, port: redisPort }
+    });
+    const subClient = pubClient.duplicate();
+
+    await Promise.all([pubClient.connect(), subClient.connect()]);
+
+    // Create a minimal Socket.IO instance just for emitting
+    const io = new Server();
+    io.adapter(createAdapter(pubClient, subClient));
+
+    // Emit the event
     io.to(`job-${data.jobId}`).emit(event, data);
+    
+    console.log(`📡 Emitted ${event} via Redis adapter`);
+
+    // Cleanup
+    await pubClient.quit();
+    await subClient.quit();
   } catch (error) {
-    // Socket.IO not initialized (worker running standalone) - that's OK
-    console.log(`ℹ️  Socket.IO not available - running in standalone mode`);
+    console.log(`ℹ️  Could not emit via Socket.IO:`, error);
   }
 };
 
@@ -253,11 +277,18 @@ async function markJobAsCompleted(jobId: string): Promise<void> {
       },
     });
 
+    // Calculate actual processing time
+    const startTime = completedJob.startedAt?.getTime() || Date.now();
+    const endTime = completedJob.completedAt?.getTime() || Date.now();
+    const processingTimeMs = endTime - startTime;
+    const processingTimeSeconds = Math.round(processingTimeMs / 1000);
+
     console.log(`\n🎉 Job ${jobId} completed successfully!`);
     console.log(`   Total: ${completedJob.totalEmails}`);
     console.log(`   Valid: ${completedJob.validEmails}`);
     console.log(`   Invalid: ${completedJob.invalidEmails}`);
     console.log(`   Unknown: ${completedJob.unknownEmails}`);
+    console.log(`   ⏱️  Processing time: ${processingTimeSeconds}s`);
 
     // Emit completion via Socket.IO (if available)
     emitSocketEvent('job-completed', {
@@ -268,6 +299,9 @@ async function markJobAsCompleted(jobId: string): Promise<void> {
       invalidEmails: completedJob.invalidEmails,
       unknownEmails: completedJob.unknownEmails,
       completedAt: completedJob.completedAt,
+      startedAt: completedJob.startedAt,  // ← ADD THIS
+      processingTimeMs,  // ← ADD THIS
+      processingTimeSeconds,  // ← ADD THIS
     });
   } catch (error) {
     console.error(`Error marking job ${jobId} as completed:`, error);
