@@ -20,7 +20,6 @@ router.use(authenticate);
 router.post('/upload', uploadLimiter as any, uploadCSV as any, createVerificationJob);
 router.post('/confirm-column', uploadLimiter as any, uploadCSV as any, confirmEmailColumn);
 
-
 // Get all jobs for user
 router.get('/jobs', getJobs);
 

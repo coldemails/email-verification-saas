@@ -21,6 +21,7 @@ model User {
   apiKeys          ApiKey[]
   transactions     Transaction[]
   verificationJobs VerificationJob[]
+  promoCodeUsages  PromoCodeUsage[]   // <-- relation added automatically when adding model
 
   @@index([email])
   @@map("users")
@@ -30,7 +31,7 @@ model VerificationJob {
   id              String               @id @default(uuid())
   userId          String
   fileName        String
-    serverFileName  String?              // ✅ Add this line
+  serverFileName  String?
   totalEmails     Int
   processedEmails Int                  @default(0)
   validEmails     Int                  @default(0)
@@ -145,4 +146,58 @@ enum TransactionStatus {
   COMPLETED
   FAILED
   REFUNDED
+}
+
+//
+// ------------------------------------------------------
+// ✅ ADDED MODELS (exactly as you provided)
+// ------------------------------------------------------
+//
+
+model PromoCode {
+  id            String   @id @default(uuid())
+  code          String   @unique
+  credits       Int
+  discountType  String
+  discountValue Int
+  maxUses       Int      @default(0)
+  currentUses   Int      @default(0)
+  isActive      Boolean  @default(true)
+  expiresAt     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  usages        PromoCodeUsage[]
+
+  @@index([code])
+  @@index([isActive])
+  @@map("promo_codes")
+}
+
+model PromoCodeUsage {
+  id           String    @id @default(uuid())
+  promoCodeId  String
+  userId       String
+  creditsAdded Int
+  usedAt       DateTime  @default(now())
+  promoCode    PromoCode @relation(fields: [promoCodeId], references: [id], onDelete: Cascade)
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([promoCodeId])
+  @@index([userId])
+  @@map("promo_code_usages")
+}
+
+model AdminLog {
+  id        String   @id @default(uuid())
+  adminId   String
+  action    String
+  targetId  String?
+  details   String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@index([adminId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("admin_logs")
 }
