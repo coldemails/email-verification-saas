@@ -26,35 +26,37 @@ console.log(`   - Timeout: ${VERIFICATION_TIMEOUT}ms`);
 /**
  * Helper to emit Socket.IO events safely using Redis adapter
  */
-const emitSocketEvent = async (event: string, data: any) => {
-  try {
-    // Create a temporary Socket.IO client to emit via Redis
-    const { Server } = await import('socket.io');
-    const { createAdapter } = await import('@socket.io/redis-adapter');
-    const { createClient } = await import('redis');
+// Create persistent Redis clients for Socket.IO
+const { createClient } = require('redis');
+let redisPub: any = null;
+let redisSub: any = null;
 
+const initRedisClients = async () => {
+  if (!redisPub) {
     const redisHost = process.env.REDIS_HOST || 'localhost';
     const redisPort = parseInt(process.env.REDIS_PORT || '6379');
 
-    const pubClient = createClient({ 
-      socket: { host: redisHost, port: redisPort }
-    });
-    const subClient = pubClient.duplicate();
+    redisPub = createClient({ socket: { host: redisHost, port: redisPort } });
+    redisSub = redisPub.duplicate();
 
-    await Promise.all([pubClient.connect(), subClient.connect()]);
+    await Promise.all([redisPub.connect(), redisSub.connect()]);
+    console.log('✅ Redis clients initialized for Socket.IO');
+  }
+};
 
-    // Create a minimal Socket.IO instance just for emitting
+const emitSocketEvent = async (event: string, data: any) => {
+  try {
+    await initRedisClients();
+
+    const { Server } = require('socket.io');
+    const { createAdapter } = require('@socket.io/redis-adapter');
+
     const io = new Server();
-    io.adapter(createAdapter(pubClient, subClient));
+    io.adapter(createAdapter(redisPub, redisSub));
 
-    // Emit the event
     io.to(`job-${data.jobId}`).emit(event, data);
     
     console.log(`📡 Emitted ${event} via Redis adapter`);
-
-    // Cleanup
-    await pubClient.quit();
-    await subClient.quit();
   } catch (error) {
     console.log(`ℹ️  Could not emit via Socket.IO:`, error);
   }
@@ -328,9 +330,13 @@ verificationQueue.on('error', (error) => {
 // Graceful shutdown
 process.on('SIGTERM', async () => {
   console.log('\n📴 Shutting down worker gracefully...');
-
+  
   await verificationQueue.close();
-
+  
+  // Close Redis clients
+  if (redisPub) await redisPub.quit();
+  if (redisSub) await redisSub.quit();
+  
   console.log('✅ Worker shut down complete');
   process.exit(0);
 });
@@ -340,6 +346,10 @@ process.on('SIGINT', async () => {
 
   await verificationQueue.close();
 
+  // Close Redis clients
+  if (redisPub) await redisPub.quit();
+  if (redisSub) await redisSub.quit();
+
   console.log('✅ Worker shut down complete');
   process.exit(0);
 });
@@ -348,3 +358,29 @@ console.log('🚀 Worker started and waiting for jobs...');
 console.log('   Press Ctrl+C to stop\n');
 
 export default verificationQueue;
+
+// Warm up worker pool - keep DNS resolver and connections ready
+(async () => {
+  console.log('🔥 Warming up worker pool...');
+  
+  try {
+    // Warm up DNS resolver with common email providers
+    const dns = require('dns').promises;
+    await Promise.all([
+      dns.resolve('gmail.com', 'MX').catch(() => {}),
+      dns.resolve('outlook.com', 'MX').catch(() => {}),
+      dns.resolve('yahoo.com', 'MX').catch(() => {}),
+      dns.resolve('hotmail.com', 'MX').catch(() => {}),
+    ]);
+    
+    // Initialize Redis clients immediately
+    await initRedisClients();
+    
+    console.log('✅ Worker pool warmed up and ready');
+    console.log('   - DNS resolver: Ready');
+    console.log('   - Redis clients: Connected');
+    console.log('   - Socket.IO adapter: Initialized');
+  } catch (error) {
+    console.warn('⚠️  Worker warm-up completed with warnings:', error);
+  }
+})();

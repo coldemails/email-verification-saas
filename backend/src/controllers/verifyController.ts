@@ -7,6 +7,24 @@ import prisma from '../utils/prisma';
 import { startVerification } from '../services/queueService';
 import { generateResultCSV } from '../services/exportService';
 
+
+/**
+ * Sanitize CSV cell content to prevent formula injection attacks
+ */
+const sanitizeCSVCell = (value: string): string => {
+  if (!value) return value;
+  
+  // Remove dangerous characters that could trigger formulas
+  const dangerous = ['=', '+', '-', '@', '\t', '\r'];
+  const firstChar = value.charAt(0);
+  
+  if (dangerous.includes(firstChar)) {
+    return `'${value}`; // Prefix with single quote to treat as text
+  }
+  
+  return value;
+};
+
 // -------------------------------------------------------------
 // MULTER CONFIG
 // -------------------------------------------------------------
@@ -15,7 +33,14 @@ const storage = multer.diskStorage({
     cb(null, 'uploads/');
   },
   filename: (req, file, cb) => {
-    const uniqueName = `${Date.now()}-${file.originalname}`;
+    // ✅ Sanitize filename - remove path traversal attempts
+    const sanitizedName = file.originalname
+      .replace(/\.\./g, '')           // Remove ..
+      .replace(/\//g, '')              // Remove /
+      .replace(/\\/g, '')              // Remove \
+      .replace(/[^a-zA-Z0-9._-]/g, '_'); // Replace special chars with _
+    
+    const uniqueName = `${Date.now()}-${sanitizedName}`;
     cb(null, uniqueName);
   },
 });
@@ -23,13 +48,16 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   fileFilter: (req, file, cb) => {
+    // Only allow CSV files
     if (file.mimetype === 'text/csv' || file.originalname.endsWith('.csv')) {
       cb(null, true);
     } else {
       cb(new Error('Only CSV files are allowed'));
     }
   },
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB limit
+  limits: { 
+    fileSize: 100 * 1024 * 1024, // ← CHANGE: 100MB hard limit (prevents crashes)
+  },
 });
 
 export const uploadCSV = upload.single('file');
@@ -39,10 +67,21 @@ export const uploadCSV = upload.single('file');
 // -------------------------------------------------------------
 export const confirmEmailColumn = async (req: Request, res: Response) => {
   try {
+    const userId = (req as any).user?.id;
     const file = req.file;
 
     if (!file) {
       return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    // ✅ CHECK: Get user's available credits
+    const user = await prisma.user.findUnique({ 
+      where: { id: userId },
+      select: { credits: true }
+    });
+
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' });
     }
 
     const filePath = path.join(process.cwd(), file.path);
@@ -61,12 +100,45 @@ export const confirmEmailColumn = async (req: Request, res: Response) => {
         .on('error', reject);
     });
 
+    // ✅ VALIDATE: Check if user has enough credits
+    if (totalRows > user.credits) {
+      // Delete uploaded file since they can't process it
+      fs.unlinkSync(filePath);
+      
+      return res.status(400).json({ 
+        error: 'Insufficient credits',
+        required: totalRows,
+        available: user.credits,
+        message: `This file contains ${totalRows.toLocaleString()} emails, but you only have ${user.credits.toLocaleString()} credits. Please upgrade your plan or upload a smaller file.`
+      });
+    }
+
+    // ✅ VALIDATE: Ensure file has at least 1 valid row
+    if (totalRows === 0) {
+      fs.unlinkSync(filePath);
+      return res.status(400).json({ 
+        error: 'Empty file',
+        message: 'The uploaded CSV file contains no data rows.'
+      });
+    }
+
+    // ✅ VALIDATE: Prevent extremely large files even if they have credits
+    const MAX_EMAILS_PER_UPLOAD = 500000; // 500K max per upload
+    if (totalRows > MAX_EMAILS_PER_UPLOAD) {
+      fs.unlinkSync(filePath);
+      return res.status(400).json({ 
+        error: 'File too large',
+        message: `Maximum ${MAX_EMAILS_PER_UPLOAD.toLocaleString()} emails per upload. For larger lists, please contact support.`
+      });
+    }
+
     return res.json({
       headers,
       totalEmails: totalRows,
       filePath: path.resolve(file.path),
-      originalFileName: file.originalname, // ✅ Added this line
+      originalFileName: file.originalname,
       message: 'Headers and total email rows detected successfully',
+      userCredits: user.credits, // ← Send this to frontend
     });
   } catch (error) {
     console.error('❌ Error detecting CSV headers:', error);

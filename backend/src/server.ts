@@ -6,6 +6,7 @@ import authRoutes from './routes/authRoutes';
 import userRoutes from './routes/userRoutes';
 import verifyRoutes from './routes/verifyRoutes';
 import { initializeSocketIO } from './config/socket';
+import { apiLimiter } from '../src/middleware/rateLimiter';
 
 dotenv.config();
 
@@ -30,7 +31,8 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
+// Apply general rate limiting to all API routes
+app.use(apiLimiter as any);
 // Routes
 app.get('/', (req: Request, res: Response) => {
   res.json({ 

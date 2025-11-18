@@ -1,3 +1,5 @@
+@import url("https://rsms.me/inter/inter.css");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -10,19 +12,22 @@
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
+    
+    /* Deep Ocean Theme - Blue/Cyan Primary Colors */
+    --primary: 217 91% 60%; /* Blue-600 */
     --primary-foreground: 210 40% 98%;
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 189 94% 43%; /* Cyan-600 */
+    --accent-foreground: 210 40% 98%;
+    
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --ring: 217 91% 60%; /* Blue-600 for focus rings */
     --radius: 0.5rem;
   }
 
@@ -52,8 +57,300 @@
 @layer base {
   * {
     @apply border-border;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
   body {
     @apply bg-background text-foreground;
   }
+  
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* ============================================
+   DEEP OCEAN ANIMATIONS - APPLE-LEVEL POLISH
+   ============================================ */
+
+/* Fade in up animation for hero elements */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0;
+}
+
+.animation-delay-100 {
+  animation-delay: 0.1s;
+}
+
+.animation-delay-200 {
+  animation-delay: 0.2s;
+}
+
+.animation-delay-300 {
+  animation-delay: 0.3s;
+}
+
+.animation-delay-400 {
+  animation-delay: 0.4s;
+}
+
+/* Custom focus states - Deep Ocean Blue/Cyan */
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid rgba(37, 99, 235, 0.5); /* Blue-600 */
+  outline-offset: 4px;
+  border-radius: 12px;
+}
+
+/* Smooth backdrop blur transitions */
+.backdrop-blur-xl {
+  transition: backdrop-filter 0.3s ease;
+}
+
+/* Premium gradient text rendering */
+.bg-clip-text {
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Smooth hover transitions for all interactive elements */
+a,
+button,
+details summary {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Custom selection colors - Deep Ocean Blue */
+::selection {
+  background-color: rgba(37, 99, 235, 0.15); /* Blue-600 */
+  color: inherit;
+}
+
+::-moz-selection {
+  background-color: rgba(37, 99, 235, 0.15);
+  color: inherit;
+}
+
+/* Enhanced shadow transitions */
+.hover\:shadow-xl {
+  transition: box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hover\:shadow-2xl {
+  transition: box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Smooth scale transitions */
+.hover\:scale-105,
+.hover\:scale-\[1\.02\],
+.hover\:scale-110 {
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Active state for buttons */
+.active\:scale-\[0\.98\]:active {
+  transform: scale(0.98);
+}
+
+/* Details/Summary smooth animation */
+details summary {
+  list-style: none;
+}
+
+details summary::-webkit-details-marker {
+  display: none;
+}
+
+details[open] summary ~ * {
+  animation: fade-in-up 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Smooth border transitions - Deep Ocean */
+.hover\:border-gray-300,
+.hover\:border-blue-200,
+.hover\:border-cyan-300 {
+  transition: border-color 0.3s ease;
+}
+
+/* Gradient background animation */
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.bg-gradient-to-r,
+.bg-gradient-to-br {
+  background-size: 200% 200%;
+}
+
+/* Premium shadow glow effect - Blue/Cyan */
+@keyframes shadow-glow {
+  0% {
+    box-shadow: 0 10px 40px -10px rgba(37, 99, 235, 0.15);
+  }
+  50% {
+    box-shadow: 0 20px 60px -10px rgba(37, 99, 235, 0.25);
+  }
+  100% {
+    box-shadow: 0 10px 40px -10px rgba(37, 99, 235, 0.15);
+  }
+}
+
+/* Improved focus states for forms - Deep Ocean Blue */
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: rgba(37, 99, 235, 0.5);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+  transition: all 0.2s ease;
+}
+
+/* Premium card hover effect */
+.group:hover .group-hover\:scale-110 {
+  transform: scale(1.1);
+}
+
+/* Smooth opacity transitions */
+.transition-opacity {
+  transition: opacity 0.3s ease;
+}
+
+/* Enhanced blur transitions */
+.blur-3xl {
+  transition: filter 0.5s ease;
+}
+
+/* Smooth gap transitions for arrows */
+.hover\:gap-3 {
+  transition: gap 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Smooth color transitions */
+.text-gray-600,
+.text-gray-900,
+.text-slate-600,
+.text-slate-900 {
+  transition: color 0.2s ease;
+}
+
+/* Premium loading state */
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.loading-shimmer {
+  animation: shimmer 2s infinite linear;
+  background: linear-gradient(
+    to right,
+    #f6f7f8 0%,
+    #edeef1 20%,
+    #f6f7f8 40%,
+    #f6f7f8 100%
+  );
+  background-size: 1000px 100%;
+}
+
+/* Deep Ocean specific - Blue gradient shimmer */
+.loading-shimmer-ocean {
+  animation: shimmer 2s infinite linear;
+  background: linear-gradient(
+    to right,
+    #eff6ff 0%,
+    #dbeafe 20%,
+    #eff6ff 40%,
+    #eff6ff 100%
+  );
+  background-size: 1000px 100%;
+}
+
+/* Enhanced reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Mobile optimization - disable hover effects on touch devices */
+@media (hover: none) and (pointer: coarse) {
+  .hover\:scale-105:hover,
+  .hover\:scale-\[1\.02\]:hover,
+  .hover\:scale-110:hover {
+    transform: none;
+  }
+  
+  .hover\:shadow-xl:hover,
+  .hover\:shadow-2xl:hover {
+    box-shadow: inherit;
+  }
+}
+
+/* ============================================
+   DEEP OCEAN CUSTOM UTILITIES
+   ============================================ */
+
+/* Ocean gradient backgrounds */
+.bg-ocean-gradient {
+  background: linear-gradient(135deg, #2563eb 0%, #0891b2 100%);
+}
+
+.bg-ocean-gradient-soft {
+  background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
+}
+
+/* Ocean text gradients */
+.text-ocean-gradient {
+  @apply bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent;
+}
+
+/* Ocean shadow utilities */
+.shadow-ocean {
+  box-shadow: 0 10px 40px -10px rgba(37, 99, 235, 0.2);
+}
+
+.shadow-ocean-lg {
+  box-shadow: 0 20px 60px -10px rgba(37, 99, 235, 0.3);
+}
+
+/* Glassmorphism - Ocean style */
+.glass-ocean {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Card hover - Ocean style */
+.card-ocean-hover {
+  @apply hover:border-blue-200 hover:shadow-lg hover:shadow-blue-500/5 transition-all duration-500;
 }

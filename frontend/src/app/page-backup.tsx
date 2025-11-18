@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import Hero3D from "../../Hero3D";
 
 // Counter animation hook
 function useCountUp(end: number, duration: number = 2000, shouldStart: boolean = false) {
@@ -135,9 +134,9 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* Hero Section with 3D */}
-      <section className="pt-40 pb-20 px-8">
-        <div className="max-w-[980px] mx-auto text-center mb-16">
+      {/* Hero Section */}
+      <section className="pt-40 pb-32 px-8">
+        <div className="max-w-[980px] mx-auto text-center">
           <div className="inline-block mb-8 animate-fade-in-up">
             <span className="bg-cyan-50 text-cyan-700 px-5 py-2.5 rounded-full text-[14px] font-medium tracking-tight border border-cyan-200/50">
               ✨ The simplest & fastest way to verify emails
@@ -157,7 +156,7 @@ export default function Home() {
             unmatched accuracy.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8 animate-fade-in-up animation-delay-300">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-14 animate-fade-in-up animation-delay-300">
             <Link
               href="/register"
               className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-9 py-4 rounded-full text-[17px] font-medium hover:shadow-2xl hover:shadow-blue-500/30 hover:scale-[1.02] transition-all duration-300 active:scale-[0.98]"
@@ -195,9 +194,6 @@ export default function Home() {
             </div>
           </div>
         </div>
-
-        {/* 3D Interactive Hero */}
-        <Hero3D />
       </section>
 
       {/* Trust & Stats Section - Redesigned with prominent USPs */}
@@ -306,7 +302,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Rest of your sections remain the same... I'll continue in next file to keep this manageable */}
       {/* Interactive Dashboard Preview */}
       <section ref={dashboardRef} className="py-32 px-8 bg-white">
         <div className="max-w-[1400px] mx-auto">

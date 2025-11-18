@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import Hero3D from "../../Hero3D";
 
 // Counter animation hook
 function useCountUp(end: number, duration: number = 2000, shouldStart: boolean = false) {
@@ -135,9 +134,9 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* Hero Section with 3D */}
-      <section className="pt-40 pb-20 px-8">
-        <div className="max-w-[980px] mx-auto text-center mb-16">
+      {/* Hero Section */}
+      <section className="pt-40 pb-32 px-8">
+        <div className="max-w-[980px] mx-auto text-center">
           <div className="inline-block mb-8 animate-fade-in-up">
             <span className="bg-cyan-50 text-cyan-700 px-5 py-2.5 rounded-full text-[14px] font-medium tracking-tight border border-cyan-200/50">
               ✨ The simplest & fastest way to verify emails
@@ -157,7 +156,7 @@ export default function Home() {
             unmatched accuracy.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8 animate-fade-in-up animation-delay-300">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-14 animate-fade-in-up animation-delay-300">
             <Link
               href="/register"
               className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-9 py-4 rounded-full text-[17px] font-medium hover:shadow-2xl hover:shadow-blue-500/30 hover:scale-[1.02] transition-all duration-300 active:scale-[0.98]"
@@ -195,118 +194,63 @@ export default function Home() {
             </div>
           </div>
         </div>
-
-        {/* 3D Interactive Hero */}
-        <Hero3D />
       </section>
 
-      {/* Trust & Stats Section - Redesigned with prominent USPs */}
-      <section className="py-24 px-8 bg-gradient-to-b from-slate-50/50 to-white">
+      {/* Trust & Stats Section - Combined */}
+      <section className="py-20 px-8 bg-gradient-to-b from-gray-50/50 to-white">
         <div className="max-w-[1200px] mx-auto">
-          
-          {/* Hero Stats - Major USPs with Animated Icons */}
-          <div className="grid md:grid-cols-2 gap-8 mb-20">
-            <div ref={statsRef} className="relative text-center p-12 bg-white rounded-[32px] border-2 border-slate-200 hover:border-cyan-300 hover:shadow-2xl hover:shadow-cyan-500/10 transition-all duration-500 group overflow-hidden">
-              {/* Animated background glow */}
-              <div className="absolute inset-0 bg-gradient-to-br from-cyan-50 to-blue-50 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-              
-              <div className="relative">
-                {/* Animated number with icon */}
-                <div className="flex items-center justify-center gap-4 mb-4">
-                  <div className="text-[72px] font-bold tracking-tighter bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
-                    {emailsPerMin}+
-                  </div>
-                  {emailsPerMin > 0 && (
-                    <div className="animate-fade-in-scale">
-                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center shadow-lg shadow-cyan-500/30">
-                        <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                        </svg>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                
-                <p className="text-[22px] font-bold text-slate-900 mb-2 tracking-tight">Emails per minute</p>
-                <p className="text-[15px] text-slate-600 tracking-tight">Average verification speed</p>
-                
-                {/* Comparison badge */}
-                <div className="mt-6 inline-block px-4 py-2 bg-cyan-50 border border-cyan-200 rounded-full">
-                  <p className="text-[13px] font-semibold text-cyan-700">
-                    ⚡ 60x faster than competitors
-                  </p>
-                </div>
+          {/* Main Stats - Hero Numbers */}
+          <div className="grid md:grid-cols-2 gap-8 mb-16">
+            <div className="text-center p-10 bg-white rounded-[28px] border border-gray-200 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-500/5 transition-all duration-500">
+              <div ref={statsRef} className="text-[64px] font-semibold tracking-tighter bg-gradient-to-r from-blue-600 to-violet-600 bg-clip-text text-transparent mb-3">
+                {emailsPerMin}+
               </div>
+              <p className="text-[18px] font-medium text-gray-900 mb-2 tracking-tight">Emails per minute</p>
+              <p className="text-[14px] text-gray-500 tracking-tight">Average verification speed</p>
             </div>
 
-            <div className="relative text-center p-12 bg-white rounded-[32px] border-2 border-slate-200 hover:border-emerald-300 hover:shadow-2xl hover:shadow-emerald-500/10 transition-all duration-500 group overflow-hidden">
-              {/* Animated background glow */}
-              <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 to-cyan-50 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-              
-              <div className="relative">
-                {/* Animated number with icon */}
-                <div className="flex items-center justify-center gap-4 mb-4">
-                  <div className="text-[72px] font-bold tracking-tighter bg-gradient-to-r from-emerald-600 to-cyan-600 bg-clip-text text-transparent">
-                    97%
-                  </div>
-                  {statsInView && (
-                    <div className="animate-fade-in-scale animation-delay-200">
-                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
-                        <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                
-                <p className="text-[22px] font-bold text-slate-900 mb-2 tracking-tight">Accuracy rate</p>
-                <p className="text-[15px] text-slate-600 tracking-tight">Industry-leading precision</p>
-                
-                {/* Trust badge */}
-                <div className="mt-6 inline-block px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-full">
-                  <p className="text-[13px] font-semibold text-emerald-700">
-                    ✓ Verified on 10M+ emails
-                  </p>
-                </div>
+            <div className="text-center p-10 bg-white rounded-[28px] border border-gray-200 hover:border-violet-200 hover:shadow-lg hover:shadow-violet-500/5 transition-all duration-500">
+              <div className="text-[64px] font-semibold tracking-tighter bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent mb-3">
+                97%
               </div>
+              <p className="text-[18px] font-medium text-gray-900 mb-2 tracking-tight">Accuracy rate</p>
+              <p className="text-[14px] text-gray-500 tracking-tight">Industry-leading precision</p>
             </div>
           </div>
 
           {/* Trust Badges Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="flex flex-col items-center text-center p-6 rounded-[20px] bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200/50 hover:border-emerald-300 hover:shadow-lg hover:shadow-emerald-500/10 transition-all duration-300 group">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center mb-3 shadow-md shadow-emerald-500/20 group-hover:scale-110 transition-transform duration-300">
+            <div className="flex flex-col items-center text-center p-6 rounded-[20px] bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200/50 hover:border-green-300 hover:shadow-lg hover:shadow-green-500/10 transition-all duration-300 group">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center mb-3 shadow-md shadow-green-500/20 group-hover:scale-110 transition-transform duration-300">
                 <span className="text-[22px]">🔒</span>
               </div>
-              <p className="text-[13px] font-semibold text-slate-900 tracking-tight">Bank-level Encryption</p>
-            </div>
-
-            <div className="flex flex-col items-center text-center p-6 rounded-[20px] bg-gradient-to-br from-cyan-50 to-sky-50 border border-cyan-200/50 hover:border-cyan-300 hover:shadow-lg hover:shadow-cyan-500/10 transition-all duration-300 group">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-500 to-sky-500 flex items-center justify-center mb-3 shadow-md shadow-cyan-500/20 group-hover:scale-110 transition-transform duration-300">
-                <span className="text-[22px]">⚡</span>
-              </div>
-              <p className="text-[13px] font-semibold text-slate-900 tracking-tight">99.9% Uptime</p>
+              <p className="text-[13px] font-semibold text-gray-900 tracking-tight">Bank-level Encryption</p>
             </div>
 
             <div className="flex flex-col items-center text-center p-6 rounded-[20px] bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-200/50 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300 group">
               <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center mb-3 shadow-md shadow-blue-500/20 group-hover:scale-110 transition-transform duration-300">
-                <span className="text-[22px]">🗑️</span>
+                <span className="text-[22px]">⚡</span>
               </div>
-              <p className="text-[13px] font-semibold text-slate-900 tracking-tight">Auto-delete in 30 days</p>
+              <p className="text-[13px] font-semibold text-gray-900 tracking-tight">99.9% Uptime</p>
             </div>
 
-            <div className="flex flex-col items-center text-center p-6 rounded-[20px] bg-gradient-to-br from-slate-50 to-gray-50 border border-slate-200/50 hover:border-slate-300 hover:shadow-lg hover:shadow-slate-500/10 transition-all duration-300 group">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-slate-500 to-gray-600 flex items-center justify-center mb-3 shadow-md shadow-slate-500/20 group-hover:scale-110 transition-transform duration-300">
+            <div className="flex flex-col items-center text-center p-6 rounded-[20px] bg-gradient-to-br from-purple-50 to-fuchsia-50 border border-purple-200/50 hover:border-purple-300 hover:shadow-lg hover:shadow-purple-500/10 transition-all duration-300 group">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-fuchsia-500 flex items-center justify-center mb-3 shadow-md shadow-purple-500/20 group-hover:scale-110 transition-transform duration-300">
+                <span className="text-[22px]">🗑️</span>
+              </div>
+              <p className="text-[13px] font-semibold text-gray-900 tracking-tight">Auto-delete in 30 days</p>
+            </div>
+
+            <div className="flex flex-col items-center text-center p-6 rounded-[20px] bg-gradient-to-br from-teal-50 to-cyan-50 border border-teal-200/50 hover:border-teal-300 hover:shadow-lg hover:shadow-teal-500/10 transition-all duration-300 group">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center mb-3 shadow-md shadow-teal-500/20 group-hover:scale-110 transition-transform duration-300">
                 <span className="text-[22px]">🌍</span>
               </div>
-              <p className="text-[13px] font-semibold text-slate-900 tracking-tight">GDPR Compliant</p>
+              <p className="text-[13px] font-semibold text-gray-900 tracking-tight">GDPR Compliant</p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Rest of your sections remain the same... I'll continue in next file to keep this manageable */}
       {/* Interactive Dashboard Preview */}
       <section ref={dashboardRef} className="py-32 px-8 bg-white">
         <div className="max-w-[1400px] mx-auto">
@@ -324,7 +268,6 @@ export default function Home() {
             onMouseLeave={handleMouseLeave}
           >
             <div className="absolute -inset-4 bg-gradient-to-r from-blue-500/10 to-violet-500/10 blur-3xl rounded-[40px] group-hover/dashboard:from-blue-500/20 group-hover/dashboard:to-violet-500/20 transition-all duration-500"></div>
-            
             
             <div className="relative bg-white rounded-[32px] shadow-2xl border border-gray-200 p-8 md:p-12 group-hover/dashboard:shadow-3xl group-hover/dashboard:border-violet-200/50 transition-all duration-500"
               key={animationKey}
@@ -730,21 +673,6 @@ export default function Home() {
             opacity: 1;
             transform: translateY(0);
           }
-        }
-
-        @keyframes fadeInScale {
-          from {
-            opacity: 0;
-            transform: scale(0) rotate(-180deg);
-          }
-          to {
-            opacity: 1;
-            transform: scale(1) rotate(0deg);
-          }
-        }
-
-        .animate-fade-in-scale {
-          animation: fadeInScale 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
         }
       `}</style>
     </main>

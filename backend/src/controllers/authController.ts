@@ -13,62 +13,141 @@ const generateToken = (userId: string): string => {
 };
 
 // Register new user
-// Register new user
 export const register = async (req: Request, res: Response) => {
   try {
     const { name, email, password } = req.body;
 
-    // Validation
+    // ✅ VALIDATE: Email and password required
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
+    // ✅ VALIDATE: Email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+
+    // ✅ VALIDATE: Email length (prevent extremely long emails)
+    if (email.length > 254) { // RFC 5321 max email length
+      return res.status(400).json({ error: 'Email is too long' });
+    }
+
+    // ✅ VALIDATE: Password strength (match frontend requirements)
     if (password.length < 8) {
       return res.status(400).json({ error: 'Password must be at least 8 characters' });
     }
 
-    // Check if user exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() }
-    });
-
-    if (existingUser) {
-      return res.status(409).json({ error: 'Email already registered' });
+    if (!/[A-Z]/.test(password)) {
+      return res.status(400).json({ error: 'Password must include an uppercase letter' });
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    if (!/[a-z]/.test(password)) {
+      return res.status(400).json({ error: 'Password must include a lowercase letter' });
+    }
 
-    // Create user
-    const user = await prisma.user.create({
-      data: {
-        name: name || null,
-        email: email.toLowerCase(),
-        password: hashedPassword,
-        credits: 100 // Give 100 free credits on signup
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        credits: true,
-        createdAt: true
+    if (!/[0-9]/.test(password)) {
+      return res.status(400).json({ error: 'Password must include a number' });
+    }
+
+    if (password.length > 128) { // Prevent extremely long passwords
+      return res.status(400).json({ error: 'Password is too long (max 128 characters)' });
+    }
+
+    // ✅ VALIDATE: Name (if provided)
+    if (name) {
+      // Remove leading/trailing whitespace
+      const trimmedName = name.trim();
+      
+      // Check length
+      if (trimmedName.length < 2) {
+        return res.status(400).json({ error: 'Name must be at least 2 characters' });
       }
-    });
+      
+      if (trimmedName.length > 100) {
+        return res.status(400).json({ error: 'Name is too long (max 100 characters)' });
+      }
+      
+      // Remove potentially dangerous characters
+      const sanitizedName = trimmedName.replace(/[<>\"\']/g, '');
+      
+      // Check if user exists
+      const existingUser = await prisma.user.findUnique({
+        where: { email: email.toLowerCase() }
+      });
 
-    // Generate token
-    const token = generateToken(user.id);
+      if (existingUser) {
+        return res.status(409).json({ error: 'Email already registered' });
+      }
 
-    res.status(201).json({
-      message: 'Registration successful',
-      user,
-      token
-    });
+      // Hash password
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      // Create user with sanitized name
+      const user = await prisma.user.create({
+        data: {
+          name: sanitizedName,
+          email: email.toLowerCase(),
+          password: hashedPassword,
+          credits: 100
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          credits: true,
+          createdAt: true
+        }
+      });
+
+      // Generate token
+      const token = generateToken(user.id);
+
+      res.status(201).json({
+        message: 'Registration successful',
+        user,
+        token
+      });
+    } else {
+      // No name provided
+      const existingUser = await prisma.user.findUnique({
+        where: { email: email.toLowerCase() }
+      });
+
+      if (existingUser) {
+        return res.status(409).json({ error: 'Email already registered' });
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      const user = await prisma.user.create({
+        data: {
+          name: null,
+          email: email.toLowerCase(),
+          password: hashedPassword,
+          credits: 100
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          credits: true,
+          createdAt: true
+        }
+      });
+
+      const token = generateToken(user.id);
+
+      res.status(201).json({
+        message: 'Registration successful',
+        user,
+        token
+      });
+    }
 
   } catch (error) {
     console.error('Register error:', error);
     
-    // More detailed error logging
     if (error instanceof Error) {
       console.error('Error message:', error.message);
       console.error('Error stack:', error.stack);
@@ -80,6 +159,7 @@ export const register = async (req: Request, res: Response) => {
     });
   }
 };
+
 // Login user
 export const login = async (req: Request, res: Response) => {
   try {
@@ -88,6 +168,12 @@ export const login = async (req: Request, res: Response) => {
     // Validation
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    // ✅ VALIDATE: Email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: 'Invalid email format' });
     }
 
     // Find user
