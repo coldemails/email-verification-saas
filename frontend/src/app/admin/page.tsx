@@ -1,9 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
+import ProxyMonitor from './components/ProxyMonitor';
+
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
@@ -28,9 +30,9 @@ interface User {
   isActive: boolean;
   emailVerified: boolean;
   createdAt: string;
-  _count: {
-    verificationJobs: number;
-    transactions: number;
+  _count?: {
+    verificationJobs?: number;
+    transactions?: number;
   };
 }
 
@@ -38,21 +40,21 @@ interface PromoCode {
   id: string;
   code: string;
   credits: number;
-  discountType: string;
-  discountValue: number;
-  maxUses: number;
-  currentUses: number;
-  isActive: boolean;
-  expiresAt: string | null;
-  createdAt: string;
-  _count: {
-    usages: number;
+  discountType?: string;
+  discountValue?: number;
+  maxUses?: number;
+  currentUses?: number;
+  isActive?: boolean;
+  expiresAt?: string | null;
+  createdAt?: string;
+  _count?: {
+    usages?: number;
   };
 }
 
-export default function AdminDashboard() {
+export default function AdminPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'proxies' | 'users' | 'promos'>('overview');
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<Stats | null>(null);
   const [users, setUsers] = useState<User[]>([]);
@@ -77,7 +79,8 @@ export default function AdminDashboard() {
   });
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    // ensure this runs only in the browser
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     if (!token) {
       router.push('/login');
       return;
@@ -85,6 +88,7 @@ export default function AdminDashboard() {
     fetchStats();
     fetchUsers();
     fetchPromoCodes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchStats = async () => {
@@ -93,14 +97,15 @@ export default function AdminDashboard() {
       const response = await axios.get(`${API_URL}/api/admin/stats`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setStats(response.data.stats);
-      setLoading(false);
+      setStats(response.data.stats ?? response.data);
     } catch (error: any) {
       console.error('Error fetching stats:', error);
-      if (error.response?.status === 403) {
+      if (error?.response?.status === 403) {
         alert('Access denied. Admin only.');
         router.push('/dashboard');
       }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -110,7 +115,7 @@ export default function AdminDashboard() {
       const response = await axios.get(`${API_URL}/api/admin/users?limit=100`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setUsers(response.data.users);
+      setUsers(response.data.users ?? response.data);
     } catch (error) {
       console.error('Error fetching users:', error);
     }
@@ -122,7 +127,7 @@ export default function AdminDashboard() {
       const response = await axios.get(`${API_URL}/api/admin/promo-codes`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setPromoCodes(response.data.promoCodes);
+      setPromoCodes(response.data.promoCodes ?? response.data);
     } catch (error) {
       console.error('Error fetching promo codes:', error);
     }
@@ -134,8 +139,8 @@ export default function AdminDashboard() {
       const token = localStorage.getItem('token');
       await axios.post(`${API_URL}/api/admin/promo-codes`, {
         code: promoForm.code.toUpperCase(),
-        credits: parseInt(promoForm.credits),
-        maxUses: parseInt(promoForm.maxUses) || 0,
+        credits: parseInt(promoForm.credits || '0', 10),
+        maxUses: parseInt(promoForm.maxUses || '0', 10) || 0,
         expiresAt: promoForm.expiresAt || null,
         discountType: 'FIXED',
         discountValue: 0
@@ -147,7 +152,8 @@ export default function AdminDashboard() {
       setPromoForm({ code: '', credits: '', maxUses: '', expiresAt: '' });
       fetchPromoCodes();
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Failed to create promo code');
+      console.error(error);
+      alert(error?.response?.data?.error || 'Failed to create promo code');
     }
   };
 
@@ -159,6 +165,7 @@ export default function AdminDashboard() {
       });
       fetchPromoCodes();
     } catch (error) {
+      console.error(error);
       alert('Failed to toggle promo code');
     }
   };
@@ -166,11 +173,10 @@ export default function AdminDashboard() {
   const handleUpdateCredits = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedUser) return;
-
     try {
       const token = localStorage.getItem('token');
       await axios.patch(`${API_URL}/api/admin/users/${selectedUser.id}/credits`, {
-        credits: parseInt(creditForm.amount),
+        credits: parseInt(creditForm.amount || '0', 10),
         action: creditForm.action
       }, {
         headers: { Authorization: `Bearer ${token}` }
@@ -182,12 +188,14 @@ export default function AdminDashboard() {
       fetchUsers();
       fetchStats();
     } catch (error) {
+      console.error(error);
       alert('Failed to update credits');
     }
   };
 
   const toggleUserStatus = async (userId: string) => {
-    if (!confirm('Are you sure you want to change this user\'s status?')) return;
+    // use browser confirm
+    if (typeof window !== 'undefined' && !window.confirm('Are you sure you want to change this user\'s status?')) return;
 
     try {
       const token = localStorage.getItem('token');
@@ -196,20 +204,21 @@ export default function AdminDashboard() {
       });
       fetchUsers();
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Failed to update user status');
+      console.error(error);
+      alert(error?.response?.data?.error || 'Failed to update user status');
     }
   };
 
   const filteredUsers = users.filter(user =>
     user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.name?.toLowerCase().includes(searchQuery.toLowerCase())
+    (user.name ?? '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto" />
           <p className="mt-4 text-gray-600">Loading admin dashboard...</p>
         </div>
       </div>
@@ -222,19 +231,16 @@ export default function AdminDashboard() {
       <nav className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl"></div>
+            <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl" />
             <span className="font-bold text-xl">OnlyValidEmails</span>
             <span className="ml-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">ADMIN</span>
           </Link>
-          
+
           <div className="flex items-center gap-4">
-            <Link 
-              href="/dashboard"
-              className="text-gray-600 hover:text-gray-900 transition-colors px-4 py-2"
-            >
+            <Link href="/dashboard" className="text-gray-600 hover:text-gray-900 transition-colors px-4 py-2">
               User Dashboard
             </Link>
-            <button 
+            <button
               onClick={() => {
                 localStorage.removeItem('token');
                 router.push('/login');
@@ -249,14 +255,40 @@ export default function AdminDashboard() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-6 py-8">
-        
-        {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-2">Admin Dashboard</h1>
           <p className="text-gray-600">Platform management and analytics</p>
         </div>
 
-        {/* Stats Grid */}
+        {/* Tabs */}
+        <div className="mb-6 flex gap-3">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`px-4 py-2 rounded-xl ${activeTab === 'overview' ? 'bg-purple-600 text-white' : 'bg-white border'}`}
+          >
+            Overview
+          </button>
+          <button
+            onClick={() => setActiveTab('proxies')}
+            className={`px-4 py-2 rounded-xl ${activeTab === 'proxies' ? 'bg-purple-600 text-white' : 'bg-white border'}`}
+          >
+            Proxies
+          </button>
+          <button
+            onClick={() => setActiveTab('users')}
+            className={`px-4 py-2 rounded-xl ${activeTab === 'users' ? 'bg-purple-600 text-white' : 'bg-white border'}`}
+          >
+            Users
+          </button>
+          <button
+            onClick={() => setActiveTab('promos')}
+            className={`px-4 py-2 rounded-xl ${activeTab === 'promos' ? 'bg-purple-600 text-white' : 'bg-white border'}`}
+          >
+            Promo Codes
+          </button>
+        </div>
+
+        {/* Overview */}
         {activeTab === 'overview' && stats && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <div className="bg-white rounded-2xl p-6 border-2 border-gray-200">
@@ -315,197 +347,111 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Tabs */}
-        <div className="bg-white rounded-2xl border-2 border-gray-200 mb-6">
-          <div className="flex border-b border-gray-200">
-            <button
-              onClick={() => setActiveTab('overview')}
-              className={`px-6 py-4 font-medium transition-colors ${
-                activeTab === 'overview'
-                  ? 'text-purple-600 border-b-2 border-purple-600'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Overview
-            </button>
-            <button
-              onClick={() => setActiveTab('users')}
-              className={`px-6 py-4 font-medium transition-colors ${
-                activeTab === 'users'
-                  ? 'text-purple-600 border-b-2 border-purple-600'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Users
-            </button>
-            <button
-              onClick={() => setActiveTab('promos')}
-              className={`px-6 py-4 font-medium transition-colors ${
-                activeTab === 'promos'
-                  ? 'text-purple-600 border-b-2 border-purple-600'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Promo Codes
-            </button>
+        {/* Proxies */}
+        {activeTab === 'proxies' && (
+          <div className="bg-white rounded-2xl p-6 border-2 border-gray-200">
+            <ProxyMonitor />
           </div>
+        )}
 
-          {/* Tab Content */}
-          <div className="p-6">
-            
-            {/* Users Tab */}
-            {activeTab === 'users' && (
-              <div>
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex-1 max-w-md">
-                    <input
-                      type="text"
-                      placeholder="Search users..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none"
-                    />
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    {filteredUsers.length} users
-                  </div>
-                </div>
+        {/* Users */}
+        {activeTab === 'users' && (
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search users by email or name"
+                className="px-4 py-2 border-2 border-gray-200 rounded-xl w-1/3"
+              />
+              <div className="text-sm text-gray-600">{users.length} users</div>
+            </div>
 
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-gray-200">
-                        <th className="text-left py-3 px-4 font-medium text-gray-600">User</th>
-                        <th className="text-left py-3 px-4 font-medium text-gray-600">Credits</th>
-                        <th className="text-left py-3 px-4 font-medium text-gray-600">Jobs</th>
-                        <th className="text-left py-3 px-4 font-medium text-gray-600">Status</th>
-                        <th className="text-left py-3 px-4 font-medium text-gray-600">Joined</th>
-                        <th className="text-right py-3 px-4 font-medium text-gray-600">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredUsers.map((user) => (
-                        <tr key={user.id} className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="py-4 px-4">
-                            <div>
-                              <div className="font-medium">{user.email}</div>
-                              {user.name && <div className="text-sm text-gray-500">{user.name}</div>}
-                              {user.role === 'ADMIN' && (
-                                <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full">Admin</span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="py-4 px-4">
-                            <span className="font-mono font-bold">{user.credits.toLocaleString()}</span>
-                          </td>
-                          <td className="py-4 px-4">
-                            <span className="text-gray-600">{user._count.verificationJobs}</span>
-                          </td>
-                          <td className="py-4 px-4">
-                            <span className={`text-xs px-2 py-1 rounded-full ${
-                              user.isActive 
-                                ? 'bg-green-100 text-green-600' 
-                                : 'bg-red-100 text-red-600'
-                            }`}>
-                              {user.isActive ? 'Active' : 'Banned'}
-                            </span>
-                          </td>
-                          <td className="py-4 px-4 text-sm text-gray-500">
-                            {new Date(user.createdAt).toLocaleDateString()}
-                          </td>
-                          <td className="py-4 px-4">
-                            <div className="flex items-center justify-end gap-2">
-                              <button
-                                onClick={() => {
-                                  setSelectedUser(user);
-                                  setShowCreditModal(true);
-                                }}
-                                className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-                              >
-                                Credits
-                              </button>
-                              {user.role !== 'ADMIN' && (
-                                <button
-                                  onClick={() => toggleUserStatus(user.id)}
-                                  className={`text-sm font-medium ${
-                                    user.isActive 
-                                      ? 'text-red-600 hover:text-red-700' 
-                                      : 'text-green-600 hover:text-green-700'
-                                  }`}
-                                >
-                                  {user.isActive ? 'Ban' : 'Unban'}
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* Promo Codes Tab */}
-            {activeTab === 'promos' && (
-              <div>
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-xl font-bold">Promo Codes</h3>
-                  <button
-                    onClick={() => setShowCreatePromo(true)}
-                    className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-2 rounded-full font-medium hover:shadow-lg transition-all"
-                  >
-                    Create Promo Code
-                  </button>
-                </div>
-
-                <div className="grid gap-4">
-                  {promoCodes.map((promo) => (
-                    <div key={promo.id} className="bg-gray-50 rounded-xl p-4 flex items-center justify-between">
-                      <div>
-                        <div className="flex items-center gap-3">
-                          <span className="font-mono font-bold text-lg">{promo.code}</span>
-                          <span className={`text-xs px-2 py-1 rounded-full ${
-                            promo.isActive 
-                              ? 'bg-green-100 text-green-600' 
-                              : 'bg-gray-200 text-gray-600'
-                          }`}>
-                            {promo.isActive ? 'Active' : 'Inactive'}
-                          </span>
-                        </div>
-                        <div className="text-sm text-gray-600 mt-1">
-                          {promo.credits} credits • Used {promo._count.usages} / {promo.maxUses === 0 ? '∞' : promo.maxUses} times
-                        </div>
-                        {promo.expiresAt && (
-                          <div className="text-xs text-gray-500 mt-1">
-                            Expires: {new Date(promo.expiresAt).toLocaleDateString()}
-                          </div>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => togglePromoCode(promo.id)}
-                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                          promo.isActive
-                            ? 'bg-red-100 text-red-600 hover:bg-red-200'
-                            : 'bg-green-100 text-green-600 hover:bg-green-200'
-                        }`}
-                      >
-                        {promo.isActive ? 'Disable' : 'Enable'}
-                      </button>
-                    </div>
-                  ))}
-
-                  {promoCodes.length === 0 && (
-                    <div className="text-center py-12 text-gray-500">
-                      No promo codes yet. Create one to get started!
-                    </div>
+            <div className="bg-white rounded-2xl p-4 border-2 border-gray-200 overflow-x-auto">
+              <table className="min-w-full text-left">
+                <thead>
+                  <tr>
+                    <th className="px-4 py-2">Email</th>
+                    <th className="px-4 py-2">Name</th>
+                    <th className="px-4 py-2">Credits</th>
+                    <th className="px-4 py-2">Status</th>
+                    <th className="px-4 py-2">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredUsers.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-6 text-center text-gray-500">No users found.</td>
+                    </tr>
                   )}
-                </div>
-              </div>
-            )}
-
+                  {filteredUsers.map((u) => (
+                    <tr key={u.id} className="border-t">
+                      <td className="px-4 py-3">{u.email}</td>
+                      <td className="px-4 py-3">{u.name ?? '-'}</td>
+                      <td className="px-4 py-3">{u.credits.toLocaleString()}</td>
+                      <td className="px-4 py-3">{u.isActive ? 'Active' : 'Disabled'}</td>
+                      <td className="px-4 py-3 flex gap-2">
+                        <button
+                          onClick={() => {
+                            setSelectedUser(u);
+                            setShowCreditModal(true);
+                          }}
+                          className="px-3 py-1 bg-purple-600 text-white rounded-xl"
+                        >
+                          Credits
+                        </button>
+                        <button
+                          onClick={() => toggleUserStatus(u.id)}
+                          className="px-3 py-1 bg-gray-200 rounded-xl"
+                        >
+                          Toggle
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Promos */}
+        {activeTab === 'promos' && (
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div />
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowCreatePromo(true);
+                  }}
+                  className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl"
+                >
+                  Create Promo
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl p-4 border-2 border-gray-200">
+              {promoCodes.length === 0 && <div className="text-gray-500">No promo codes yet.</div>}
+              {promoCodes.map((p) => (
+                <div key={p.id} className="flex items-center justify-between border-b py-3">
+                  <div>
+                    <div className="font-medium">{p.code}</div>
+                    <div className="text-sm text-gray-600">Credits: {p.credits}</div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => togglePromoCode(p.id)} className="px-3 py-1 bg-gray-200 rounded-xl">
+                      Toggle
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
       </div>
 
       {/* Create Promo Modal */}
@@ -519,7 +465,7 @@ export default function AdminDashboard() {
                 <input
                   type="text"
                   value={promoForm.code}
-                  onChange={(e) => setPromoForm({...promoForm, code: e.target.value.toUpperCase()})}
+                  onChange={(e) => setPromoForm({ ...promoForm, code: e.target.value.toUpperCase() })}
                   placeholder="WELCOME2024"
                   className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none font-mono"
                   required
@@ -530,7 +476,7 @@ export default function AdminDashboard() {
                 <input
                   type="number"
                   value={promoForm.credits}
-                  onChange={(e) => setPromoForm({...promoForm, credits: e.target.value})}
+                  onChange={(e) => setPromoForm({ ...promoForm, credits: e.target.value })}
                   placeholder="1000"
                   className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none"
                   required
@@ -541,7 +487,7 @@ export default function AdminDashboard() {
                 <input
                   type="number"
                   value={promoForm.maxUses}
-                  onChange={(e) => setPromoForm({...promoForm, maxUses: e.target.value})}
+                  onChange={(e) => setPromoForm({ ...promoForm, maxUses: e.target.value })}
                   placeholder="0"
                   className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none"
                 />
@@ -551,7 +497,7 @@ export default function AdminDashboard() {
                 <input
                   type="datetime-local"
                   value={promoForm.expiresAt}
-                  onChange={(e) => setPromoForm({...promoForm, expiresAt: e.target.value})}
+                  onChange={(e) => setPromoForm({ ...promoForm, expiresAt: e.target.value })}
                   className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none"
                 />
               </div>
@@ -590,7 +536,7 @@ export default function AdminDashboard() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Action</label>
                 <select
                   value={creditForm.action}
-                  onChange={(e) => setCreditForm({...creditForm, action: e.target.value})}
+                  onChange={(e) => setCreditForm({ ...creditForm, action: e.target.value })}
                   className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none"
                 >
                   <option value="add">Add Credits</option>
@@ -602,7 +548,7 @@ export default function AdminDashboard() {
                 <input
                   type="number"
                   value={creditForm.amount}
-                  onChange={(e) => setCreditForm({...creditForm, amount: e.target.value})}
+                  onChange={(e) => setCreditForm({ ...creditForm, amount: e.target.value })}
                   placeholder="1000"
                   className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none"
                   required

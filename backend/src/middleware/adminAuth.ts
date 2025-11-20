@@ -10,11 +10,13 @@ export const adminAuth = async (req: Request, res: Response, next: NextFunction)
       return res.status(401).json({ error: 'No token provided' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as { userId: string };
-    
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET || 'fallback-secret'
+    ) as { userId: string };
+
     const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
-      select: { id: true, role: true, isActive: true }
+      where: { id: decoded.userId }
     });
 
     if (!user) {
@@ -29,7 +31,9 @@ export const adminAuth = async (req: Request, res: Response, next: NextFunction)
       return res.status(403).json({ error: 'Account is disabled' });
     }
 
-    (req as any).userId = user.id;
+    // Attach full user object so req.user exists everywhere
+    req.user = user;
+
     next();
   } catch (error) {
     console.error('Admin auth error:', error);

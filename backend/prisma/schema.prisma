@@ -7,6 +7,29 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+//
+// ------------------------------------------------------
+// ✅ NEW MODEL: ProxyUsage (added exactly as provided)
+// ------------------------------------------------------
+model ProxyUsage {
+  id           String   @id @default(cuid())
+  ipAddress    String   @unique
+  requestCount Int      @default(0)
+  lastUsed     DateTime @default(now())
+  dailyQuota   Int      @default(1000)
+  status       String   @default("active") // active, rate_limited, banned
+  createdAt    DateTime @default(now())
+
+  @@index([ipAddress])
+  @@index([lastUsed])
+  @@index([status])
+}
+
+//
+// ------------------------------------------------------
+// Existing models
+// ------------------------------------------------------
+
 model User {
   id               String            @id @default(uuid())
   email            String            @unique
@@ -21,7 +44,7 @@ model User {
   apiKeys          ApiKey[]
   transactions     Transaction[]
   verificationJobs VerificationJob[]
-  promoCodeUsages  PromoCodeUsage[]   // <-- relation added automatically when adding model
+  promoCodeUsages  PromoCodeUsage[]
 
   @@index([email])
   @@map("users")
@@ -150,22 +173,21 @@ enum TransactionStatus {
 
 //
 // ------------------------------------------------------
-// ✅ ADDED MODELS (exactly as you provided)
+// Promo Code Models
 // ------------------------------------------------------
-//
 
 model PromoCode {
-  id            String   @id @default(uuid())
-  code          String   @unique
+  id            String           @id @default(uuid())
+  code          String           @unique
   credits       Int
   discountType  String
   discountValue Int
-  maxUses       Int      @default(0)
-  currentUses   Int      @default(0)
-  isActive      Boolean  @default(true)
+  maxUses       Int              @default(0)
+  currentUses   Int              @default(0)
+  isActive      Boolean          @default(true)
   expiresAt     DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
   usages        PromoCodeUsage[]
 
   @@index([code])

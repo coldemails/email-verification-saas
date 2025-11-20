@@ -2,6 +2,7 @@ import verificationQueue from '../config/queue';
 import prisma from '../utils/prisma';
 import enhancedVerificationService from '../services/enhancedVerificationService';
 import { getIO } from '../config/socket';
+import { trackProxyUsage } from '../utils/proxyTracker';
 
 interface JobData {
   jobId: string;
@@ -23,9 +24,6 @@ console.log(`🔧 Worker Configuration:`);
 console.log(`   - Concurrency: ${CONCURRENCY}`);
 console.log(`   - Timeout: ${VERIFICATION_TIMEOUT}ms`);
 
-/**
- * Helper to emit Socket.IO events safely using Redis adapter
- */
 // Create persistent Redis clients for Socket.IO
 const { createClient } = require('redis');
 let redisPub: any = null;
@@ -64,34 +62,25 @@ const emitSocketEvent = async (event: string, data: any) => {
 
 /**
  * Main worker processor
- * Processes batches of emails from the queue
  */
 verificationQueue.process(CONCURRENCY, async (job) => {
   const { jobId, emails, batchNumber, totalBatches } = job.data as JobData;
 
-  console.log(
-    `\n🔄 Processing batch ${batchNumber}/${totalBatches} for job ${jobId}`
-  );
+  console.log(`\n🔄 Processing batch ${batchNumber}/${totalBatches} for job ${jobId}`);
   console.log(`   - Emails in batch: ${emails.length}`);
 
   try {
-    // Get job details
     const verificationJob = await prisma.verificationJob.findUnique({
       where: { id: jobId },
       include: { user: true },
     });
 
-    if (!verificationJob) {
-      throw new Error(`Job ${jobId} not found in database`);
-    }
-
-    // Check if job was cancelled
+    if (!verificationJob) throw new Error(`Job ${jobId} not found`);
     if (verificationJob.status === 'CANCELLED') {
-      console.log(`⏹️ Job ${jobId} was cancelled, skipping batch`);
+      console.log(`⏹️ Job ${jobId} cancelled`);
       return { success: false, reason: 'Job cancelled' };
     }
 
-    // Process each email in the batch
     const results = [];
     let processedCount = 0;
     let validCount = 0;
@@ -101,23 +90,45 @@ verificationQueue.process(CONCURRENCY, async (job) => {
 
     for (const emailData of emails) {
       try {
+        // 🔥 PROXY USAGE TRACKING
+        const proxyIP = process.env.DECODO_PROXY_HOST || '127.0.0.1';
+
+        const canProceed = await trackProxyUsage(proxyIP);
+        if (!canProceed) {
+          console.warn(`🚫 IP quota exceeded for ${proxyIP}. Skipping verification.`);
+
+          await prisma.verificationResult.create({
+            data: {
+              jobId,
+              email: emailData.email,
+              status: 'RISKY',
+              reason: 'IP_RATE_LIMIT_EXCEEDED',
+              smtpValid: null,
+              hasMxRecord: null,
+              isCatchAll: null,
+              isDisposable: false,
+              isRoleAccount: false,
+            },
+          });
+
+          riskyCount++;
+          unknownCount++;
+          processedCount++;
+          continue;
+        }
+
         // Update progress
         job.progress(
           Math.round(((processedCount + 1) / emails.length) * 100)
         );
 
-        // Verify email using enhanced 12-layer service
         const verificationResult = await Promise.race([
           enhancedVerificationService.verifyEmail(emailData.email),
           new Promise((_, reject) =>
-            setTimeout(
-              () => reject(new Error('Verification timeout')),
-              VERIFICATION_TIMEOUT
-            )
+            setTimeout(() => reject(new Error('Verification timeout')), VERIFICATION_TIMEOUT)
           ),
         ]) as Awaited<ReturnType<typeof enhancedVerificationService.verifyEmail>>;
 
-        // Save result to database
         await prisma.verificationResult.create({
           data: {
             jobId,
@@ -135,34 +146,22 @@ verificationQueue.process(CONCURRENCY, async (job) => {
         });
 
         results.push(verificationResult);
-
-        // Update counts
         processedCount++;
+
         switch (verificationResult.status) {
-          case 'VALID':
-            validCount++;
-            break;
-          case 'INVALID':
-            invalidCount++;
-            break;
-          case 'UNKNOWN':
-            unknownCount++;
-            break;
-          case 'RISKY':
-            riskyCount++;
-            break;
+          case 'VALID': validCount++; break;
+          case 'INVALID': invalidCount++; break;
+          case 'UNKNOWN': unknownCount++; break;
+          case 'RISKY': riskyCount++; break;
         }
 
-        // Log progress every 10 emails
         if (processedCount % 10 === 0) {
-          console.log(
-            `   ✓ Processed ${processedCount}/${emails.length} emails in batch ${batchNumber}`
-          );
+          console.log(`   ✓ Processed ${processedCount}/${emails.length}`);
         }
+
       } catch (error) {
         console.error(`   ❌ Error verifying ${emailData.email}:`, error);
 
-        // Save as unknown/error
         await prisma.verificationResult.create({
           data: {
             jobId,
@@ -182,26 +181,18 @@ verificationQueue.process(CONCURRENCY, async (job) => {
       }
     }
 
-    // Update job statistics in database
+    // UPDATE JOB STATS
     const updatedJob = await prisma.verificationJob.update({
       where: { id: jobId },
       data: {
-        processedEmails: {
-          increment: processedCount,
-        },
-        validEmails: {
-          increment: validCount,
-        },
-        invalidEmails: {
-          increment: invalidCount,
-        },
-        unknownEmails: {
-          increment: unknownCount + riskyCount,
-        },
+        processedEmails: { increment: processedCount },
+        validEmails: { increment: validCount },
+        invalidEmails: { increment: invalidCount },
+        unknownEmails: { increment: unknownCount + riskyCount },
       },
     });
 
-    // Emit real-time progress via Socket.IO (if available)
+    // Emit progress
     emitSocketEvent('job-progress', {
       jobId,
       totalEmails: updatedJob.totalEmails,
@@ -217,23 +208,16 @@ verificationQueue.process(CONCURRENCY, async (job) => {
       totalBatches,
     });
 
-    console.log(
-      `   ✅ Batch ${batchNumber}/${totalBatches} completed for job ${jobId}`
-    );
-    console.log(`      Valid: ${validCount}, Invalid: ${invalidCount}, Unknown: ${unknownCount}, Risky: ${riskyCount}`);
+    console.log(`   ✅ Batch ${batchNumber}/${totalBatches} completed`);
 
-    // Check if this was the last batch
     if (updatedJob.processedEmails >= updatedJob.totalEmails) {
       await markJobAsCompleted(jobId);
     }
 
-    // Deduct credits from user
     await prisma.user.update({
       where: { id: verificationJob.userId },
       data: {
-        credits: {
-          decrement: processedCount,
-        },
+        credits: { decrement: processedCount },
       },
     });
 
@@ -245,18 +229,15 @@ verificationQueue.process(CONCURRENCY, async (job) => {
       unknown: unknownCount,
       risky: riskyCount,
     };
-  } catch (error) {
-    console.error(`❌ Error processing batch ${batchNumber} for job ${jobId}:`, error);
 
-    // Update job status to FAILED
+  } catch (error) {
+    console.error(`❌ Error processing batch ${batchNumber}:`, error);
+
     await prisma.verificationJob.update({
       where: { id: jobId },
-      data: {
-        status: 'FAILED',
-      },
+      data: { status: 'FAILED' },
     });
 
-    // Emit error via Socket.IO (if available)
     emitSocketEvent('job-error', {
       jobId,
       error: (error as Error).message,
@@ -266,9 +247,6 @@ verificationQueue.process(CONCURRENCY, async (job) => {
   }
 });
 
-/**
- * Mark job as completed
- */
 async function markJobAsCompleted(jobId: string): Promise<void> {
   try {
     const completedJob = await prisma.verificationJob.update({
@@ -279,20 +257,14 @@ async function markJobAsCompleted(jobId: string): Promise<void> {
       },
     });
 
-    // Calculate actual processing time
     const startTime = completedJob.startedAt?.getTime() || Date.now();
     const endTime = completedJob.completedAt?.getTime() || Date.now();
     const processingTimeMs = endTime - startTime;
-    const processingTimeSeconds = Math.round(processingTimeMs / 1000);
 
-    console.log(`\n🎉 Job ${jobId} completed successfully!`);
+    console.log(`\n🎉 Job ${jobId} completed`);
     console.log(`   Total: ${completedJob.totalEmails}`);
-    console.log(`   Valid: ${completedJob.validEmails}`);
-    console.log(`   Invalid: ${completedJob.invalidEmails}`);
-    console.log(`   Unknown: ${completedJob.unknownEmails}`);
-    console.log(`   ⏱️  Processing time: ${processingTimeSeconds}s`);
+    console.log(`   ⏱️  Time: ${Math.round(processingTimeMs / 1000)}s`);
 
-    // Emit completion via Socket.IO (if available)
     emitSocketEvent('job-completed', {
       jobId,
       totalEmails: completedJob.totalEmails,
@@ -301,16 +273,16 @@ async function markJobAsCompleted(jobId: string): Promise<void> {
       invalidEmails: completedJob.invalidEmails,
       unknownEmails: completedJob.unknownEmails,
       completedAt: completedJob.completedAt,
-      startedAt: completedJob.startedAt,  // ← ADD THIS
-      processingTimeMs,  // ← ADD THIS
-      processingTimeSeconds,  // ← ADD THIS
+      startedAt: completedJob.startedAt,
+      processingTimeMs,
+      processingTimeSeconds: Math.round(processingTimeMs / 1000),
     });
+
   } catch (error) {
-    console.error(`Error marking job ${jobId} as completed:`, error);
+    console.error(`Error completing job ${jobId}:`, error);
   }
 }
 
-// Worker event handlers
 verificationQueue.on('completed', (job, result) => {
   console.log(`✅ Job ${job.id} completed:`, result);
 });
@@ -320,51 +292,46 @@ verificationQueue.on('failed', (job, err) => {
 });
 
 verificationQueue.on('stalled', (job) => {
-  console.warn(`⚠️ Job ${job.id} stalled - will be retried`);
+  console.warn(`⚠️ Job ${job.id} stalled`);
 });
 
 verificationQueue.on('error', (error) => {
   console.error('❌ Queue error:', error);
 });
 
-// Graceful shutdown
 process.on('SIGTERM', async () => {
-  console.log('\n📴 Shutting down worker gracefully...');
-  
+  console.log('\n📴 Shutting down...');
+
   await verificationQueue.close();
-  
-  // Close Redis clients
+
   if (redisPub) await redisPub.quit();
   if (redisSub) await redisSub.quit();
-  
-  console.log('✅ Worker shut down complete');
+
+  console.log('✅ Worker shut down');
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
-  console.log('\n📴 Received SIGINT, shutting down worker...');
+  console.log('\n📴 SIGINT received...');
 
   await verificationQueue.close();
 
-  // Close Redis clients
   if (redisPub) await redisPub.quit();
   if (redisSub) await redisSub.quit();
 
-  console.log('✅ Worker shut down complete');
+  console.log('✅ Worker shut down');
   process.exit(0);
 });
 
-console.log('🚀 Worker started and waiting for jobs...');
-console.log('   Press Ctrl+C to stop\n');
+console.log('🚀 Worker started\n');
 
 export default verificationQueue;
 
-// Warm up worker pool - keep DNS resolver and connections ready
+// Warm up worker pool
 (async () => {
   console.log('🔥 Warming up worker pool...');
-  
+
   try {
-    // Warm up DNS resolver with common email providers
     const dns = require('dns').promises;
     await Promise.all([
       dns.resolve('gmail.com', 'MX').catch(() => {}),
@@ -372,15 +339,11 @@ export default verificationQueue;
       dns.resolve('yahoo.com', 'MX').catch(() => {}),
       dns.resolve('hotmail.com', 'MX').catch(() => {}),
     ]);
-    
-    // Initialize Redis clients immediately
+
     await initRedisClients();
-    
-    console.log('✅ Worker pool warmed up and ready');
-    console.log('   - DNS resolver: Ready');
-    console.log('   - Redis clients: Connected');
-    console.log('   - Socket.IO adapter: Initialized');
+
+    console.log('✅ Worker pool ready');
   } catch (error) {
-    console.warn('⚠️  Worker warm-up completed with warnings:', error);
+    console.warn('⚠️ Worker warm-up warning:', error);
   }
 })();
