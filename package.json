@@ -23,7 +23,9 @@
     "npm": ">=10.0.0"
   },
   "dependencies": {
+    "@prisma/client": "^7.0.0",
     "@studio-freight/lenis": "^1.0.42",
-    "framer-motion": "^12.23.24"
+    "framer-motion": "^12.23.24",
+    "prisma": "^7.0.0"
   }
 }

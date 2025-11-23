@@ -32,7 +32,7 @@ export const adminAuth = async (req: Request, res: Response, next: NextFunction)
     }
 
     // Attach full user object so req.user exists everywhere
-    req.user = user;
+(req as any).admin = { id: user.id, email: user.email };
 
     next();
   } catch (error) {

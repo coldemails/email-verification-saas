@@ -8,6 +8,9 @@ import verifyRoutes from './routes/verifyRoutes';
 import { initializeSocketIO } from './config/socket';
 import { apiLimiter } from '../src/middleware/rateLimiter';
 import adminRoutes from './routes/adminRoutes'; // ← ADD THIS
+import promoRoutes from "./routes/promoRoutes";
+
+
 
 
 dotenv.config();
@@ -49,6 +52,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/verify', verifyRoutes);
 app.use('/api/admin', adminRoutes); // ← ADD THIS
+app.use("/api/promo", promoRoutes);  // ← THIS SHOULD BE HERE
 
 
 app.get('/health', (req: Request, res: Response) => {

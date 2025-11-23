@@ -3,10 +3,12 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useAuth } from '../lib/auth';
+import PromoCodeInput from '../../../components/PromoCodeInput';
+import PromoCodeHistory from '../../../components/PromoCodeHistory';
 
 export default function SettingsPage() {
   useAuth();
-  const [activeTab, setActiveTab] = useState('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'notifications' | 'api' | 'billing' | 'promo'>('profile');
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
@@ -205,6 +207,20 @@ export default function SettingsPage() {
                   <path fillRule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clipRule="evenodd" />
                 </svg>
                 <span className="text-[15px]">Billing</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('promo')}
+                className={`w-full text-left px-5 py-4 rounded-[14px] font-medium transition-all duration-300 flex items-center gap-3 mt-2 ${
+                  activeTab === 'promo'
+                    ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg shadow-blue-500/25'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                }`}
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M5 2a1 1 0 011 1v1h1a1 1 0 010 2H6v1a1 1 0 01-2 0V6H3a1 1 0 010-2h1V3a1 1 0 011-1zm0 10a1 1 0 011 1v1h1a1 1 0 110 2H6v1a1 1 0 11-2 0v-1H3a1 1 0 110-2h1v-1a1 1 0 011-1zM12 2a1 1 0 01.967.744L14.146 7.2 17.5 9.134a1 1 0 010 1.732l-3.354 1.935-1.18 4.455a1 1 0 01-1.933 0L9.854 12.8 6.5 10.866a1 1 0 010-1.732l3.354-1.935 1.18-4.455A1 1 0 0112 2z" clipRule="evenodd" />
+                </svg>
+                <span className="text-[15px]">Promo Codes</span>
               </button>
             </div>
           </div>
@@ -606,6 +622,28 @@ export default function SettingsPage() {
                           </div>
                         </div>
                       </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Promo Codes Tab */}
+              {activeTab === 'promo' && (
+                <div className="animate-fade-in-up">
+                  <h2 className="text-[32px] font-semibold tracking-tight text-slate-900 mb-4">Promo Codes</h2>
+                  <p className="text-[16px] text-slate-600 mb-10">
+                    Redeem promo codes to get free credits added to your account.
+                  </p>
+                  
+                  <div className="space-y-8">
+                    {/* Promo Code Input */}
+                    <div className="bg-white border-2 border-slate-200 rounded-[20px] p-8">
+                      <PromoCodeInput variant="full" />
+                    </div>
+
+                    {/* Promo Code History */}
+                    <div className="bg-white border-2 border-slate-200 rounded-[20px] p-8">
+                      <PromoCodeHistory />
                     </div>
                   </div>
                 </div>

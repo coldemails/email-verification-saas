@@ -1,7 +1,9 @@
+import { SocksClient } from 'socks';
 import validator from 'validator';
 import dns from 'dns';
 import { promisify } from 'util';
 import net from 'net';
+import { proxyService } from '../services/proxyService';
 
 const resolveMx = promisify(dns.resolveMx);
 const resolveTxt = promisify(dns.resolveTxt);
@@ -217,8 +219,12 @@ class EnhancedEmailVerificationService {
         ? 'Present'
         : 'Missing';
 
-      // LAYER 12: SMTP Validation (Skipped for now - requires proxies)
-      // result.checks.smtpValid = await this.layer12_validateSMTP(result.email);
+      // LAYER 12: SMTP Validation (with proxy rotation)
+      // Returns true | false | null
+      result.checks.smtpValid = await this.layer12_validateSMTP(
+        result.email,
+        result.details.mxRecords || []
+      );
 
       // Calculate final score and status
       result.score = this.calculateScore(result.checks);
@@ -441,11 +447,186 @@ class EnhancedEmailVerificationService {
   }
 
   // LAYER 12: SMTP Validation (Will implement with proxies in production)
-  private async layer12_validateSMTP(email: string): Promise<boolean> {
-    // TODO: Implement SMTP verification with proxy rotation
-    // This requires connecting to mail server and checking if mailbox exists
-    return true; // Placeholder
+  // Returns: true (valid), false (invalid), or null (couldn't run)
+  private async layer12_validateSMTP(email: string, mxRecords: string[]): Promise<boolean | null> {
+    if (!mxRecords || mxRecords.length === 0) {
+      console.log("⚠️ No MX records — skipping SMTP check");
+      return false;
+    }
+
+    const domain = email.split("@")[1];
+
+    // Get a healthy proxy from proxyService
+    let proxy: string | null = null;
+    try {
+      proxy = await proxyService.getHealthyProxy();
+    } catch (err) {
+      console.error("Error getting proxy:", err);
+      proxy = null;
+    }
+
+    if (!proxy) {
+      console.log("⛔ No working proxies available — skipping SMTP check (returning null)");
+      return null;
+    }
+
+    console.log(`🔌 Using proxy for SMTP: ${proxy}`);
+
+    // Choose primary MX host (highest priority is first in array)
+    const mxHost = mxRecords[0];
+
+    try {
+      const smtpResponse = await this.performSMTPCheck(email, mxHost, proxy);
+
+      if (smtpResponse) {
+        await proxyService.markProxySuccessful(proxy);
+        return true;
+      } else {
+        await proxyService.markProxyFailed(proxy);
+        return false;
+      }
+    } catch (err) {
+      console.log("SMTP check failed for proxy:", proxy, err);
+      try { await proxyService.markProxyFailed(proxy); } catch {}
+      return false;
+    }
   }
+
+  // Helper: Connect to SMTP server and check mailbox existence
+  // NOTE: This now uses SOCKS5 proxy tunneling for SMTP verification.
+
+  // you'd need a proxy-aware socket (e.g., using `socks` package or spawn proxytunnel).
+// Helper: Connect to SMTP server through SOCKS5 proxy and check mailbox existence
+// Helper: Connect to SMTP server through SOCKS5 proxy and check mailbox existence
+private async performSMTPCheck(email: string, mxHost: string, proxy: string): Promise<boolean> {
+  // Parse proxy format: "user:pass@ip:port" OR "ip:port"
+  const parseProxy = (p: string) => {
+    p = p.replace(/^socks5:\/\//i, '').trim();
+    
+    const atIndex = p.indexOf('@');
+    let creds = null;
+    let hostPort = p;
+
+    if (atIndex !== -1) {
+      creds = p.slice(0, atIndex);
+      hostPort = p.slice(atIndex + 1);
+    }
+
+    const [user, pass] = creds ? creds.split(':') : [undefined, undefined];
+    const [host, portStr] = hostPort.split(':');
+    const port = Number(portStr || 1080);
+
+    return { host, port, user, pass };
+  };
+
+  const { host: proxyHost, port: proxyPort, user: proxyUser, pass: proxyPass } = parseProxy(proxy);
+
+  try {
+    // Create SOCKS5 tunnel to MX host (port 25)
+    const info = await SocksClient.createConnection({
+      command: 'connect',
+      destination: { host: mxHost, port: 25 },
+      proxy: {
+        host: proxyHost,
+        port: proxyPort,
+        type: 5,
+        userId: proxyUser,
+        password: proxyPass,
+      },
+      timeout: 8000,
+    });
+
+    const socket: import('net').Socket = info.socket as any;
+    socket.setEncoding('ascii');
+    socket.setTimeout(8000);
+
+    return await new Promise<boolean>((resolve) => {
+      const commands = [
+        `HELO ${mxHost}\r\n`,
+        `MAIL FROM:<verify@${mxHost}>\r\n`,
+        `RCPT TO:<${email}>\r\n`,
+        `QUIT\r\n`
+      ];
+
+      let step = 0;
+      let buffer = '';
+
+      const cleanup = () => {
+        try { socket.destroy(); } catch {}
+      };
+
+      socket.on('data', (data: string) => {
+        buffer += data;
+
+        try {
+          // 220 = server greeting
+          if (buffer.includes('220') && step === 0) {
+            socket.write(commands[0]);
+            step++;
+            buffer = '';
+            return;
+          }
+
+          // MAIL FROM accepted
+          if (buffer.includes('250') && step === 1) {
+            socket.write(commands[1]);
+            step++;
+            buffer = '';
+            return;
+          }
+
+          // RCPT TO
+          if (buffer.includes('250') && step === 2) {
+            socket.write(commands[2]);
+            step++;
+            buffer = '';
+            return;
+          }
+
+          // RCPT accepted → mailbox exists
+          if (buffer.includes('250') && step === 3) {
+            socket.write(commands[3]);
+            cleanup();
+            return resolve(true);
+          }
+
+          // 550 — mailbox does NOT exist
+          if (buffer.includes('550')) {
+            cleanup();
+            return resolve(false);
+          }
+
+          // Temporary error (451, 452) → treat as fail
+          if (buffer.match(/45\d/)) {
+            cleanup();
+            return resolve(false);
+          }
+
+        } catch (err) {
+          cleanup();
+          return resolve(false);
+        }
+      });
+
+      socket.on('error', () => { cleanup(); return resolve(false); });
+      socket.on('timeout', () => { cleanup(); return resolve(false); });
+      socket.on('end', () => { cleanup(); return resolve(false); });
+
+      // Safety timeout
+      setTimeout(() => {
+        cleanup();
+        return resolve(false);
+      }, 10000);
+    });
+
+  } catch (err) {
+    console.error('SOCKS5 connection error:', err);
+    return false;
+  }
+}
+
+
+
 
   // =================== SCORING & STATUS ===================
 

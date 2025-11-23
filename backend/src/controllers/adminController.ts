@@ -129,7 +129,8 @@ export const updateUserCredits = async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
     const { credits, action } = req.body; // action: 'add' or 'set'
-    const adminId = (req as any).userId;
+const adminId = (req as any).admin.id;
+
 
     if (!credits || credits < 0) {
       return res.status(400).json({ error: 'Invalid credits amount' });
@@ -178,7 +179,8 @@ export const updateUserCredits = async (req: Request, res: Response) => {
 export const toggleUserStatus = async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
-    const adminId = (req as any).userId;
+    const adminId = (req as any).admin.id;
+
 
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
@@ -261,7 +263,7 @@ export const getTransactions = async (req: Request, res: Response) => {
 export const createPromoCode = async (req: Request, res: Response) => {
   try {
     const { code, credits, discountType, discountValue, maxUses, expiresAt } = req.body;
-    const adminId = (req as any).userId;
+    const adminId = (req as any).admin.id;
 
     if (!code || !credits) {
       return res.status(400).json({ error: 'Code and credits are required' });
@@ -322,7 +324,7 @@ export const getPromoCodes = async (req: Request, res: Response) => {
 export const togglePromoCode = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const adminId = (req as any).userId;
+    const adminId = (req as any).admin.id;
 
     const promoCode = await prisma.promoCode.findUnique({ where: { id } });
     if (!promoCode) {
