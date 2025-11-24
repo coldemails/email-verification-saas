@@ -159,7 +159,7 @@ export default function Hero3D() {
 
                 {/* Text */}
                 <div className="flex-1">
-                  <p className="text-[18px] sm:text-[22px] md:text-[28px] font-bold text-slate-900 tracking-tight mb-0">
+                  <p className="text-[18px] sm:text-[22px] md:text-[28px] font-bold text-slate-900 tracking-tight mb-0 ">
                     {verificationLayers[activeLayer].name}
                   </p>
                   <p className="text-[13px] sm:text-[14px] md:text-[16px] text-slate-500 font-medium mt-1">

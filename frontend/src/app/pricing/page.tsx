@@ -1,12 +1,41 @@
+'use client';
+
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 
 export default function PricingPage() {
+  // Authentication state
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userName, setUserName] = useState('');
+  
+  // Check authentication status on mount
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      setIsAuthenticated(true);
+      // Optionally fetch user name from localStorage or API
+      const userEmail = localStorage.getItem('userEmail');
+      if (userEmail) {
+        setUserName(userEmail.split('@')[0]); // Use first part of email as name
+      }
+    }
+  }, []);
+  
+  // Logout handler
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('userEmail');
+    setIsAuthenticated(false);
+    setUserName('');
+    window.location.reload(); // Refresh to update UI
+  };
+
   return (
     <main className="min-h-screen bg-white">
       {/* Navigation */}
       <nav className="fixed top-0 w-full bg-white/80 backdrop-blur-xl border-b border-slate-200 z-50 transition-all duration-300">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3 group">
+          <Link href={isAuthenticated ? "/dashboard" : "/"} className="flex items-center gap-3 group">
             <div className="w-9 h-9 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-[10px] shadow-lg shadow-blue-500/25 group-hover:shadow-xl group-hover:shadow-blue-500/40 group-hover:scale-105 transition-all duration-300 flex items-center justify-center">
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
@@ -27,19 +56,71 @@ export default function PricingPage() {
               FAQ
             </Link>
           </div>
+          
+          {/* CTA Buttons - Conditional based on auth state */}
           <div className="flex items-center gap-3">
-            <Link 
-              href="/login" 
-              className="text-[15px] text-slate-600 hover:text-slate-900 font-medium transition-colors duration-200 px-4 py-2"
-            >
-              Sign in
-            </Link>
-            <Link 
-              href="/register" 
-              className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-6 py-2.5 rounded-full text-[15px] font-medium hover:shadow-xl hover:shadow-blue-500/30 hover:scale-105 transition-all duration-300"
-            >
-              Get started free
-            </Link>
+            {!isAuthenticated ? (
+              <>
+                {/* Not logged in - Show Sign in & Get started */}
+                <Link 
+                  href="/login" 
+                  className="text-[15px] text-slate-600 hover:text-slate-900 font-medium transition-colors duration-200 px-4 py-2"
+                >
+                  Sign in
+                </Link>
+                <Link 
+                  href="/register" 
+                  className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-6 py-2.5 rounded-full text-[15px] font-medium hover:shadow-xl hover:shadow-blue-500/30 hover:scale-105 transition-all duration-300"
+                >
+                  Get started free
+                </Link>
+              </>
+            ) : (
+              <>
+                {/* Logged in - Show Dashboard & User menu */}
+                <Link 
+                  href="/dashboard"
+                  className="hidden sm:block text-[15px] text-slate-600 hover:text-slate-900 font-medium transition-colors duration-200 px-4 py-2"
+                >
+                  Dashboard
+                </Link>
+                
+                {/* User Menu Dropdown */}
+                <div className="relative group">
+                  <button className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-5 py-2.5 rounded-full text-[15px] font-medium hover:shadow-xl hover:shadow-blue-500/30 transition-all duration-300">
+                    <span className="hidden sm:inline">{userName || 'Account'}</span>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  
+                  {/* Dropdown Menu */}
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-slate-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                    <div className="py-2">
+                      <Link
+                        href="/dashboard"
+                        className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                      >
+                        Dashboard
+                      </Link>
+                      <Link
+                        href="/settings"
+                        className="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                      >
+                        Settings
+                      </Link>
+                      <hr className="my-2 border-slate-200" />
+                      <button
+                        onClick={handleLogout}
+                        className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                      >
+                        Logout
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </nav>
@@ -111,10 +192,10 @@ export default function PricingPage() {
                 <p className="text-[14px] text-slate-400 mt-1.5">$0.00295 per email</p>
               </div>
               <Link 
-                href="/register" 
+                href={isAuthenticated ? "/dashboard/credits" : "/register"}
                 className="block w-full bg-slate-100 text-center text-slate-700 py-4 rounded-full text-[17px] font-medium hover:bg-slate-200 transition-all duration-300 mb-8 group-hover:scale-105"
               >
-                Get started
+                {isAuthenticated ? 'Add Credits' : 'Get started'}
               </Link>
               <div className="space-y-4 text-[15px]">
                 <div className="flex items-start gap-3">
@@ -157,16 +238,16 @@ export default function PricingPage() {
               <div className="mb-8">
                 <h3 className="text-[24px] font-semibold text-slate-900 mb-3">Basic</h3>
                 <div className="flex items-baseline gap-2 mb-3">
-                  <span className="text-[56px] font-semibold tracking-tight text-slate-900">$5.95</span>
+                  <span className="text-[56px] font-semibold tracking-tight text-slate-900">$9.95</span>
                 </div>
                 <p className="text-[17px] text-slate-600 font-medium">5,000 emails</p>
                 <p className="text-[14px] text-slate-400 mt-1.5">$0.00119 per email</p>
               </div>
               <Link 
-                href="/register" 
+                href={isAuthenticated ? "/dashboard/credits" : "/register"}
                 className="block w-full bg-slate-100 text-center text-slate-700 py-4 rounded-full text-[17px] font-medium hover:bg-slate-200 transition-all duration-300 mb-8 group-hover:scale-105"
               >
-                Get started
+                {isAuthenticated ? 'Add Credits' : 'Get started'}
               </Link>
               <div className="space-y-4 text-[15px]">
                 <div className="flex items-start gap-3">
@@ -220,16 +301,16 @@ export default function PricingPage() {
                 <div className="mb-8">
                   <h3 className="text-[24px] font-semibold mb-3">Growth</h3>
                   <div className="flex items-baseline gap-2 mb-3">
-                    <span className="text-[56px] font-semibold tracking-tight">$9.95</span>
+                    <span className="text-[56px] font-semibold tracking-tight">$24.95</span>
                   </div>
                   <p className="text-[17px] text-blue-100 font-medium">10,000 emails</p>
                   <p className="text-[14px] text-blue-200 mt-1.5">$0.00099 per email</p>
                 </div>
                 <Link 
-                  href="/register" 
+                  href={isAuthenticated ? "/dashboard/credits" : "/register"}
                   className="block w-full bg-white text-blue-600 text-center py-4 rounded-full text-[17px] font-medium hover:bg-blue-50 hover:shadow-xl transition-all duration-300 mb-8 hover:scale-105"
                 >
-                  Get started
+                  {isAuthenticated ? 'Add Credits' : 'Get started'}
                 </Link>
                 <div className="space-y-4 text-[15px]">
                   <div className="flex items-start gap-3">
@@ -268,21 +349,21 @@ export default function PricingPage() {
               </div>
             </div>
 
-            {/* 25,000 emails */}
+            {/* 30,000 emails */}
             <div className="bg-white border-2 border-slate-200 rounded-[28px] p-10 hover:border-blue-200 hover:shadow-xl hover:shadow-blue-500/10 hover:scale-[1.02] transition-all duration-500 group">
               <div className="mb-8">
                 <h3 className="text-[24px] font-semibold text-slate-900 mb-3">Professional</h3>
                 <div className="flex items-baseline gap-2 mb-3">
-                  <span className="text-[56px] font-semibold tracking-tight text-slate-900">$23.95</span>
+                  <span className="text-[56px] font-semibold tracking-tight text-slate-900">$44.95</span>
                 </div>
-                <p className="text-[17px] text-slate-600 font-medium">25,000 emails</p>
+                <p className="text-[17px] text-slate-600 font-medium">30,000 emails</p>
                 <p className="text-[14px] text-slate-400 mt-1.5">$0.00095 per email</p>
               </div>
               <Link 
-                href="/register" 
+                href={isAuthenticated ? "/dashboard/credits" : "/register"}
                 className="block w-full bg-gradient-to-r from-blue-600 to-cyan-600 text-center text-white py-4 rounded-full text-[17px] font-medium hover:shadow-xl hover:shadow-blue-500/30 transition-all duration-300 mb-8 group-hover:scale-105"
               >
-                Get started
+                {isAuthenticated ? 'Add Credits' : 'Get started'}
               </Link>
               <div className="space-y-4 text-[15px]">
                 <div className="flex items-start gap-3">
@@ -325,16 +406,16 @@ export default function PricingPage() {
               <div className="mb-8">
                 <h3 className="text-[24px] font-semibold text-slate-900 mb-3">Business</h3>
                 <div className="flex items-baseline gap-2 mb-3">
-                  <span className="text-[56px] font-semibold tracking-tight text-slate-900">$44.95</span>
+                  <span className="text-[56px] font-semibold tracking-tight text-slate-900">$69.95</span>
                 </div>
                 <p className="text-[17px] text-slate-600 font-medium">50,000 emails</p>
                 <p className="text-[14px] text-slate-400 mt-1.5">$0.00089 per email</p>
               </div>
               <Link 
-                href="/register" 
+                href={isAuthenticated ? "/dashboard/credits" : "/register"}
                 className="block w-full bg-gradient-to-r from-blue-600 to-cyan-600 text-center text-white py-4 rounded-full text-[17px] font-medium hover:shadow-xl hover:shadow-blue-500/30 transition-all duration-300 mb-8 group-hover:scale-105"
               >
-                Get started
+                {isAuthenticated ? 'Add Credits' : 'Get started'}
               </Link>
               <div className="space-y-4 text-[15px]">
                 <div className="flex items-start gap-3">
@@ -380,16 +461,16 @@ export default function PricingPage() {
               <div className="mb-8">
                 <h3 className="text-[24px] font-semibold text-slate-900 mb-3">Enterprise</h3>
                 <div className="flex items-baseline gap-2 mb-3">
-                  <span className="text-[56px] font-semibold tracking-tight text-slate-900">$74.95</span>
+                  <span className="text-[56px] font-semibold tracking-tight text-slate-900">$99.95</span>
                 </div>
                 <p className="text-[17px] text-slate-600 font-medium">100,000 emails</p>
                 <p className="text-[14px] text-slate-400 mt-1.5">$0.00075 per email</p>
               </div>
               <Link 
-                href="/register" 
+                href={isAuthenticated ? "/dashboard/credits" : "/register"}
                 className="block w-full bg-gradient-to-r from-blue-600 to-cyan-600 text-center text-white py-4 rounded-full text-[17px] font-medium hover:shadow-xl hover:shadow-blue-500/30 transition-all duration-300 mb-8 group-hover:scale-105"
               >
-                Get started
+                {isAuthenticated ? 'Add Credits' : 'Get started'}
               </Link>
               <div className="space-y-4 text-[15px]">
                 <div className="flex items-start gap-3">
@@ -448,10 +529,10 @@ export default function PricingPage() {
               Choose a package and start verifying in seconds.
             </p>
             <Link 
-              href="/register" 
+              href={isAuthenticated ? "/dashboard" : "/register"}
               className="inline-flex items-center gap-2 bg-white text-blue-600 px-10 py-5 rounded-full text-[19px] font-medium hover:shadow-2xl hover:scale-105 transition-all duration-300 group"
             >
-              Start verifying now
+              {isAuthenticated ? 'Go to Dashboard' : 'Start verifying now'}
               <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
               </svg>
