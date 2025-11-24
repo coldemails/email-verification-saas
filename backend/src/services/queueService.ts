@@ -68,7 +68,7 @@ export const startVerification = async (
     });
 
     // Add job to Bull queue with batching for better performance
-    const batchSize = 100; // Process 100 emails per batch
+    const batchSize = 500; // Process 100 emails per batch
     const batches = [];
 
     for (let i = 0; i < emails.length; i += batchSize) {

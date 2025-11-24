@@ -27,6 +27,7 @@ function parseProxyList() {
 class ProxyService {
   private proxyPool: string[] = [];
   private index: number = 0;
+  private lastHealthCheck = new Map<string, number>(); // ✅ NEW: Cache health checks
 
   constructor() {
     this.loadProxyPool();
@@ -113,7 +114,7 @@ class ProxyService {
             password: pass,
           },
         },
-        timeout: 5000,
+        timeout: 2000, // ✅ CHANGED: 5000 → 2000 (faster timeout)
       });
 
       return true;
@@ -128,14 +129,24 @@ class ProxyService {
       const proxy = await this.getNextProxy();
       if (!proxy) return null;
 
-      const isHealthy = await this.checkProxyHealth(proxy);
-
-      if (isHealthy) {
+      const lastCheck = this.lastHealthCheck.get(proxy) || 0;
+      const now = Date.now();
+      
+      // ✅ NEW: Only check health every 60 seconds (not every email!)
+      if (now - lastCheck > 60000) {
+        const isHealthy = await this.checkProxyHealth(proxy);
+        this.lastHealthCheck.set(proxy, now);
+        
+        if (!isHealthy) {
+          await this.markProxyFailed(proxy);
+          continue; // Try next proxy
+        }
+        
         await this.markProxySuccessful(proxy);
-        return proxy;
-      } else {
-        await this.markProxyFailed(proxy);
       }
+      
+      // Return immediately if checked within last 60 seconds
+      return proxy;
     }
 
     console.log("❌ No healthy proxies available!");

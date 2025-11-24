@@ -4,10 +4,15 @@ import dns from 'dns';
 import { promisify } from 'util';
 import net from 'net';
 import { proxyService } from '../services/proxyService';
+import Redis from 'ioredis';
+
+
 
 const resolveMx = promisify(dns.resolveMx);
 const resolveTxt = promisify(dns.resolveTxt);
 const resolve4 = promisify(dns.resolve4);
+const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+
 
 interface VerificationResult {
   email: string;
@@ -91,6 +96,39 @@ class EnhancedEmailVerificationService {
   // Cache for DNS lookups to improve performance
   private dnsCache = new Map<string, any>();
   private cacheTimeout = 3600000; // 1 hour
+
+ /**
+ * Get DNS results from Redis cache or perform lookup
+ */
+private async getDNSWithCache(
+  domain: string
+): Promise<{ hasARecord: boolean; hasMxRecord: boolean; mxRecords: string[] }> {
+  const cacheKey = `dns:${domain}`;
+  
+  try {
+    // Check Redis cache first
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      console.log(`📦 DNS cache hit: ${domain}`);
+      return JSON.parse(cached);
+    }
+  } catch (err) {
+    console.log(`⚠️ Redis cache read error:`, err);
+  }
+  
+  // Not cached - do lookup (FIX: Call layer9_validateDNS, NOT getDNSWithCache)
+  const result = await this.layer9_validateDNS(domain); // ✅ FIXED
+  
+  try {
+    // Cache for 1 hour
+    await redis.setex(cacheKey, 3600, JSON.stringify(result));
+    console.log(`💾 DNS cached: ${domain}`);
+  } catch (err) {
+    console.log(`⚠️ Redis cache write error:`, err);
+  }
+  
+  return result;
+}
 
   /**
    * Main verification method - 12 layers of checks
@@ -197,7 +235,7 @@ class EnhancedEmailVerificationService {
         : 'Custom Domain';
 
       // LAYER 9: DNS & MX Record Validation
-      const dnsResults = await this.layer9_validateDNS(domain);
+      const dnsResults = await this.getDNSWithCache(domain);
       result.checks.dnsValid = dnsResults.hasARecord;
       result.checks.mxValid = dnsResults.hasMxRecord;
       result.details.mxRecords = dnsResults.mxRecords;
@@ -492,11 +530,9 @@ class EnhancedEmailVerificationService {
     }
   }
 
-  // Helper: Connect to SMTP server and check mailbox existence
   // NOTE: This now uses SOCKS5 proxy tunneling for SMTP verification.
 
   // you'd need a proxy-aware socket (e.g., using `socks` package or spawn proxytunnel).
-// Helper: Connect to SMTP server through SOCKS5 proxy and check mailbox existence
 // Helper: Connect to SMTP server through SOCKS5 proxy and check mailbox existence
 private async performSMTPCheck(email: string, mxHost: string, proxy: string): Promise<boolean> {
   // Parse proxy format: "user:pass@ip:port" OR "ip:port"
@@ -533,12 +569,12 @@ private async performSMTPCheck(email: string, mxHost: string, proxy: string): Pr
         userId: proxyUser,
         password: proxyPass,
       },
-      timeout: 8000,
+      timeout: 2000,
     });
 
     const socket: import('net').Socket = info.socket as any;
     socket.setEncoding('ascii');
-    socket.setTimeout(8000);
+    socket.setTimeout(3000);
 
     return await new Promise<boolean>((resolve) => {
       const commands = [
@@ -613,10 +649,11 @@ private async performSMTPCheck(email: string, mxHost: string, proxy: string): Pr
       socket.on('end', () => { cleanup(); return resolve(false); });
 
       // Safety timeout
-      setTimeout(() => {
-        cleanup();
+      setTimeout(() => { 
+        cleanup(); 
         return resolve(false);
-      }, 10000);
+      }, 3500); // Line 616
+
     });
 
   } catch (err) {

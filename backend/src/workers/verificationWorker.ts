@@ -15,9 +15,9 @@ interface JobData {
 }
 
 // Worker configuration
-const CONCURRENCY = parseInt(process.env.WORKER_CONCURRENCY || '10');
+const CONCURRENCY = parseInt(process.env.WORKER_CONCURRENCY || '50');
 const VERIFICATION_TIMEOUT = parseInt(
-  process.env.VERIFICATION_TIMEOUT_MS || '30000'
+  process.env.VERIFICATION_TIMEOUT_MS || '10000'
 );
 
 console.log(`🔧 Worker Configuration:`);
