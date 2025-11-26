@@ -9,6 +9,8 @@ export default function ForgotPasswordPage() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState('');
 
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
@@ -30,19 +32,62 @@ export default function ForgotPasswordPage() {
 
     setIsLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      console.log('🔄 Sending forgot password request to:', `${API_URL}/api/auth/forgot-password`);
+      
+      const response = await fetch(`${API_URL}/api/auth/forgot-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email })
+      });
+
+      const data = await response.json();
+      console.log('📥 Response:', data);
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to send reset email');
+      }
+
+      // Success - show success screen
       setIsSuccess(true);
-    }, 1500);
+      
+    } catch (error: any) {
+      console.error('❌ Forgot password error:', error);
+      setError(error.message || 'Failed to send reset email. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleResend = () => {
+  const handleResend = async () => {
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    setError('');
+    
+    try {
+      const response = await fetch(`${API_URL}/api/auth/forgot-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email })
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to resend email');
+      }
+
       // Could show a toast notification here
-    }, 1500);
+      console.log('✅ Email resent successfully');
+      
+    } catch (error: any) {
+      console.error('❌ Resend error:', error);
+      setError(error.message || 'Failed to resend email');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -249,7 +294,7 @@ export default function ForgotPasswordPage() {
         </div>
       </div>
 
-      {/* Right Side - Hero */}
+      {/* Right Side - Hero (keeping same as before) */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-600 via-blue-700 to-cyan-600 p-16 items-center justify-center relative overflow-hidden">
         {/* Animated Background Decorations */}
         <div className="absolute inset-0">

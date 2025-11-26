@@ -3,20 +3,17 @@ node_modules/
 package-lock.json
 yarn.lock
 
+# Next.js
+.next/
+out/
+
 # Environment
 .env
 .env.local
 .env.production
 
-# Uploads & Temp
-uploads/
-temp/
-results/
-
 # Logs
-logs/
 *.log
-npm-debug.log*
 
 # OS
 .DS_Store
@@ -25,5 +22,3 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
-*.swp
-*.swo

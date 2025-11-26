@@ -16,6 +16,7 @@ export const authenticate = (req: Request, res: Response, next: NextFunction) =>
       process.env.JWT_SECRET || 'fallback-secret'
     ) as { userId: string };
 
+    (req as any).userId = decoded.userId; // ← Set userId directly
     // ✅ Attach user in correct format
     (req as any).user = { id: decoded.userId };
 
