@@ -304,6 +304,9 @@ export const sendPaymentReceiptEmail = async (
 /**
  * Send job completion notification (optional - can be disabled)
  */
+/**
+ * Send job completion notification with SPEED EMPHASIS
+ */
 export const sendJobCompletionEmail = async (
   email: string,
   name: string,
@@ -311,16 +314,29 @@ export const sendJobCompletionEmail = async (
   fileName: string,
   totalEmails: number,
   validEmails: number,
-  invalidEmails: number
+  invalidEmails: number,
+  unknownEmails: number,
+  processingTimeSeconds: number,
+  averageSpeed: number
 ): Promise<void> => {
   const downloadUrl = `${FRONTEND_URL}/dashboard`;
   const validPercentage = Math.round((validEmails / totalEmails) * 100);
+  const invalidPercentage = Math.round((invalidEmails / totalEmails) * 100);
+  const unknownPercentage = Math.round((unknownEmails / totalEmails) * 100);
+  
+  // Format time nicely
+  const formatTime = (seconds: number): string => {
+    if (seconds < 60) return `${seconds}s`;
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}m ${remainingSeconds}s`;
+  };
   
   try {
     await resend.emails.send({
       from: FROM_EMAIL,
       to: email,
-      subject: `Email Verification Complete - ${fileName}`,
+      subject: `✅ Verification Complete - ${totalEmails} emails in ${formatTime(processingTimeSeconds)}!`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -333,53 +349,98 @@ export const sendJobCompletionEmail = async (
             <tr>
               <td align="center" style="padding: 40px 0;">
                 <table role="presentation" style="width: 600px; max-width: 90%; background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                  
                   <!-- Header -->
                   <tr>
                     <td style="padding: 40px 40px 20px; text-align: center;">
                       <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 16px; margin: 0 auto 20px; display: inline-flex; align-items: center; justify-content: center;">
                         <span style="color: white; font-size: 32px;">✓</span>
                       </div>
-                      <h1 style="margin: 0; font-size: 28px; font-weight: 700; color: #0f172a;">Verification Complete!</h1>
+                      <h1 style="margin: 0; font-size: 28px; font-weight: 700; color: #0f172a;">✅ Verification Complete!</h1>
+                      <p style="margin: 8px 0 0; font-size: 16px; color: #64748b;">Hi ${name}, your email verification is ready</p>
                     </td>
                   </tr>
                   
-                  <!-- Content -->
+                  <!-- SPEED HIGHLIGHT BOX -->
                   <tr>
-                    <td style="padding: 0 40px 40px;">
-                      <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: #475569;">
-                        Hi <strong>${name}</strong>,
-                      </p>
-                      <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: #475569;">
-                        Your email verification job for <strong>${fileName}</strong> is complete!
-                      </p>
-                      
-                      <!-- Results -->
-                      <div style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0;">
-                        <table style="width: 100%; border-collapse: collapse;">
+                    <td style="padding: 0 40px 20px;">
+                      <div style="background: linear-gradient(135deg, #dbeafe 0%, #cffafe 100%); border: 2px solid #bae6fd; border-radius: 20px; padding: 32px; text-align: center;">
+                        <div style="font-size: 48px; margin-bottom: 16px;">⚡</div>
+                        <div style="font-size: 56px; font-weight: 700; background: linear-gradient(135deg, #2563eb 0%, #06b6d4 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0; line-height: 1;">${formatTime(processingTimeSeconds)}</div>
+                        <div style="color: #64748b; font-size: 14px; margin-top: 8px; font-weight: 600;">TOTAL PROCESSING TIME</div>
+                        
+                        <table style="width: 100%; margin-top: 16px;">
                           <tr>
-                            <td style="padding: 8px 0; font-size: 14px; color: #64748b;">Total Processed:</td>
-                            <td style="padding: 8px 0; font-size: 16px; font-weight: 700; color: #0f172a; text-align: right;">${totalEmails.toLocaleString()}</td>
-                          </tr>
-                          <tr>
-                            <td style="padding: 8px 0; font-size: 14px; color: #10b981;">Valid Emails:</td>
-                            <td style="padding: 8px 0; font-size: 16px; font-weight: 700; color: #10b981; text-align: right;">${validEmails.toLocaleString()} (${validPercentage}%)</td>
-                          </tr>
-                          <tr>
-                            <td style="padding: 8px 0; font-size: 14px; color: #ef4444;">Invalid Emails:</td>
-                            <td style="padding: 8px 0; font-size: 16px; font-weight: 700; color: #ef4444; text-align: right;">${invalidEmails.toLocaleString()}</td>
+                            <td style="padding: 12px; text-align: center;">
+                              <div style="background: white; padding: 12px 24px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); display: inline-block;">
+                                <div style="font-size: 24px; font-weight: 700; color: #0f172a; margin: 0;">${averageSpeed}</div>
+                                <div style="font-size: 12px; color: #64748b; margin-top: 4px;">emails/sec</div>
+                              </div>
+                            </td>
+                            <td style="padding: 12px; text-align: center;">
+                              <div style="background: white; padding: 12px 24px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); display: inline-block;">
+                                <div style="font-size: 24px; font-weight: 700; color: #0f172a; margin: 0;">${totalEmails.toLocaleString()}</div>
+                                <div style="font-size: 12px; color: #64748b; margin-top: 4px;">emails processed</div>
+                              </div>
+                            </td>
                           </tr>
                         </table>
                       </div>
-                      
-                      <!-- CTA Button -->
-                      <div style="text-align: center; margin: 32px 0;">
-                        <a href="${downloadUrl}" style="display: inline-block; background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 12px; font-weight: 600; font-size: 16px;">
-                          Download Results
-                        </a>
+                    </td>
+                  </tr>
+                  
+                  <!-- File Info -->
+                  <tr>
+                    <td style="padding: 0 40px 20px;">
+                      <div style="background: #f8fafc; border-radius: 16px; padding: 20px; display: flex; align-items: center;">
+                        <div style="background: #e0f2fe; width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; float: left; margin-right: 16px;">📄</div>
+                        <div>
+                          <div style="font-weight: 600; color: #0f172a; font-size: 16px; margin: 0 0 4px 0;">${fileName}</div>
+                          <div style="color: #64748b; font-size: 14px; margin: 0;">Verification completed • ${totalEmails.toLocaleString()} emails</div>
+                        </div>
                       </div>
-                      
-                      <p style="margin: 24px 0 0; font-size: 14px; line-height: 1.6; color: #64748b;">
-                        Your results are available in your dashboard and can be downloaded as a CSV file.
+                    </td>
+                  </tr>
+                  
+                  <!-- Results Grid -->
+                  <tr>
+                    <td style="padding: 0 40px 20px;">
+                      <table style="width: 100%; border-collapse: collapse;">
+                        <tr>
+                          <td style="padding: 10px; width: 33.33%;">
+                            <div style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border-radius: 16px; padding: 20px; text-align: center;">
+                              <div style="font-size: 12px; color: #64748b; font-weight: 600; margin: 0 0 8px 0; text-transform: uppercase;">Valid</div>
+                              <div style="font-size: 36px; font-weight: 700; color: #0f172a; margin: 0 0 4px 0;">${validEmails.toLocaleString()}</div>
+                              <div style="font-size: 14px; color: #64748b; margin: 0;">${validPercentage}% of total</div>
+                            </div>
+                          </td>
+                          <td style="padding: 10px; width: 33.33%;">
+                            <div style="background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); border-radius: 16px; padding: 20px; text-align: center;">
+                              <div style="font-size: 12px; color: #64748b; font-weight: 600; margin: 0 0 8px 0; text-transform: uppercase;">Invalid</div>
+                              <div style="font-size: 36px; font-weight: 700; color: #0f172a; margin: 0 0 4px 0;">${invalidEmails.toLocaleString()}</div>
+                              <div style="font-size: 14px; color: #64748b; margin: 0;">${invalidPercentage}% of total</div>
+                            </div>
+                          </td>
+                          <td style="padding: 10px; width: 33.33%;">
+                            <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 16px; padding: 20px; text-align: center;">
+                              <div style="font-size: 12px; color: #64748b; font-weight: 600; margin: 0 0 8px 0; text-transform: uppercase;">Unknown</div>
+                              <div style="font-size: 36px; font-weight: 700; color: #0f172a; margin: 0 0 4px 0;">${unknownEmails.toLocaleString()}</div>
+                              <div style="font-size: 14px; color: #64748b; margin: 0;">${unknownPercentage}% of total</div>
+                            </div>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  
+                  <!-- CTA Button -->
+                  <tr>
+                    <td style="padding: 20px 40px 40px; text-align: center;">
+                      <a href="${downloadUrl}" style="display: inline-block; background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 9999px; font-weight: 600; font-size: 17px; box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.2);">
+                        View Results & Download
+                      </a>
+                      <p style="margin: 16px 0 0; font-size: 14px; color: #64748b;">
+                        Your results are ready to download in CSV format
                       </p>
                     </td>
                   </tr>
@@ -389,6 +450,10 @@ export const sendJobCompletionEmail = async (
                     <td style="padding: 20px 40px; background-color: #f8fafc; border-radius: 0 0 16px 16px; text-align: center;">
                       <p style="margin: 0; font-size: 12px; color: #94a3b8;">
                         © 2025 ${APP_NAME}. All rights reserved.
+                      </p>
+                      <p style="margin: 8px 0 0; font-size: 12px; color: #94a3b8;">
+                        <a href="${FRONTEND_URL}/privacy" style="color: #0ea5e9; text-decoration: none;">Privacy Policy</a> | 
+                        <a href="${FRONTEND_URL}/terms" style="color: #0ea5e9; text-decoration: none;">Terms of Service</a>
                       </p>
                     </td>
                   </tr>

@@ -278,6 +278,47 @@ async function markJobAsCompleted(jobId: string): Promise<void> {
       processingTimeSeconds: Math.round(processingTimeMs / 1000),
     });
 
+    // 🆕 ADD THIS EMAIL NOTIFICATION CODE HERE:
+    try {
+      // Get user details with the job
+      const jobWithUser = await prisma.verificationJob.findUnique({
+        where: { id: jobId },
+        include: {
+          user: {
+            select: { email: true, name: true }
+          }
+        }
+      });
+
+      if (jobWithUser?.user?.email) {
+        const processingTimeSeconds = Math.round(processingTimeMs / 1000);
+        const averageSpeed = processingTimeSeconds > 0 
+          ? Math.round(completedJob.totalEmails / processingTimeSeconds) 
+          : completedJob.totalEmails;
+
+        // Import at top if not already: import emailService from '../services/emailService';
+        const emailService = require('../services/emailService').default;
+        
+        await emailService.sendJobCompletionEmail(
+          jobWithUser.user.email,
+          jobWithUser.user.name || 'User',
+          jobId,
+          jobWithUser.fileName,
+          completedJob.totalEmails,
+          completedJob.validEmails || 0,
+          completedJob.invalidEmails || 0,
+          completedJob.unknownEmails || 0,
+          processingTimeSeconds,
+          averageSpeed
+        );
+        
+        console.log(`✅ Job completion email sent to ${jobWithUser.user.email}`);
+      }
+    } catch (emailError) {
+      console.error('❌ Failed to send job completion email:', emailError);
+      // Don't fail the job if email fails
+    }
+
   } catch (error) {
     console.error(`Error completing job ${jobId}:`, error);
   }
