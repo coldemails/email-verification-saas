@@ -12,7 +12,7 @@ const APP_NAME = 'OnlyValidEmails';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://onlyvalidemails.com';
 
 /**
- * Send welcome email to new users
+ * Send welcome email to new users - GMAIL OPTIMIZED
  */
 export const sendWelcomeEmail = async (email: string, name: string): Promise<void> => {
   try {
@@ -27,57 +27,69 @@ export const sendWelcomeEmail = async (email: string, name: string): Promise<voi
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
         </head>
-        <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8fafc;">
-          <table role="presentation" style="width: 100%; border-collapse: collapse;">
+        <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f8fafc;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f8fafc;">
             <tr>
-              <td align="center" style="padding: 40px 0;">
-                <table role="presentation" style="width: 600px; max-width: 90%; background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+              <td align="center" style="padding: 40px 20px;">
+                <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width: 600px; background-color: #ffffff; border-radius: 16px;">
                   <!-- Header -->
                   <tr>
-                    <td style="padding: 40px 40px 20px; text-align: center;">
-                      <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%); border-radius: 16px; margin: 0 auto 20px; display: inline-flex; align-items: center; justify-content: center;">
-                        <span style="color: white; font-size: 32px;">✓</span>
-                      </div>
-                      <h1 style="margin: 0; font-size: 28px; font-weight: 700; color: #0f172a;">Welcome to ${APP_NAME}!</h1>
+                    <td align="center" style="padding: 40px 30px 20px;">
+                      <table cellpadding="0" cellspacing="0" border="0">
+                        <tr>
+                          <td align="center" style="background-color: #0ea5e9; width: 60px; height: 60px; border-radius: 12px;">
+                            <span style="color: #ffffff; font-size: 32px; line-height: 60px;">✓</span>
+                          </td>
+                        </tr>
+                      </table>
+                      <h1 style="margin: 20px 0 0; font-size: 28px; font-weight: 700; color: #0f172a; font-family: Arial, sans-serif;">Welcome to ${APP_NAME}!</h1>
                     </td>
                   </tr>
                   
                   <!-- Content -->
                   <tr>
-                    <td style="padding: 0 40px 40px;">
-                      <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: #475569;">
+                    <td style="padding: 0 30px 30px;">
+                      <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: #475569; font-family: Arial, sans-serif;">
                         Hi <strong>${name}</strong>,
                       </p>
-                      <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: #475569;">
+                      <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: #475569; font-family: Arial, sans-serif;">
                         Thanks for signing up! Your account has been created successfully.
                       </p>
                       
                       <!-- Free Credits Box -->
-                      <div style="background: linear-gradient(135deg, #06b6d4 0%, #0ea5e9 100%); border-radius: 12px; padding: 24px; margin: 24px 0; text-align: center;">
-                        <p style="margin: 0 0 8px; font-size: 14px; color: rgba(255,255,255,0.9); text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Welcome Bonus</p>
-                        <p style="margin: 0; font-size: 42px; font-weight: 700; color: #ffffff;">100 Credits</p>
-                        <p style="margin: 8px 0 0; font-size: 14px; color: rgba(255,255,255,0.9);">Free to get you started</p>
-                      </div>
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #0ea5e9; border-radius: 12px; margin: 24px 0;">
+                        <tr>
+                          <td align="center" style="padding: 24px;">
+                            <p style="margin: 0 0 8px; font-size: 12px; color: rgba(255,255,255,0.9); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; font-family: Arial, sans-serif;">Welcome Bonus</p>
+                            <p style="margin: 0; font-size: 42px; font-weight: 700; color: #ffffff; line-height: 1; font-family: Arial, sans-serif;">100 Credits</p>
+                            <p style="margin: 8px 0 0; font-size: 14px; color: rgba(255,255,255,0.9); font-family: Arial, sans-serif;">Free to get you started</p>
+                          </td>
+                        </tr>
+                      </table>
                       
-                      <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: #475569;">
+                      <p style="margin: 0 0 12px; font-size: 16px; line-height: 1.6; color: #475569; font-family: Arial, sans-serif;">
                         You can start verifying your email lists right away. Our 12-layer verification engine will help you:
                       </p>
                       
-                      <ul style="margin: 0 0 24px; padding-left: 20px; color: #475569;">
-                        <li style="margin-bottom: 8px;">✓ Remove invalid emails</li>
-                        <li style="margin-bottom: 8px;">✓ Detect disposable addresses</li>
-                        <li style="margin-bottom: 8px;">✓ Identify role accounts</li>
-                        <li style="margin-bottom: 8px;">✓ Verify SMTP deliverability</li>
-                      </ul>
+                      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 24px 20px;">
+                        <tr><td style="padding: 4px 0; font-size: 15px; color: #475569; font-family: Arial, sans-serif;">✓ Remove invalid emails</td></tr>
+                        <tr><td style="padding: 4px 0; font-size: 15px; color: #475569; font-family: Arial, sans-serif;">✓ Detect disposable addresses</td></tr>
+                        <tr><td style="padding: 4px 0; font-size: 15px; color: #475569; font-family: Arial, sans-serif;">✓ Identify role accounts</td></tr>
+                        <tr><td style="padding: 4px 0; font-size: 15px; color: #475569; font-family: Arial, sans-serif;">✓ Verify SMTP deliverability</td></tr>
+                      </table>
                       
                       <!-- CTA Button -->
-                      <div style="text-align: center; margin: 32px 0;">
-                        <a href="${FRONTEND_URL}/dashboard" style="display: inline-block; background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 12px; font-weight: 600; font-size: 16px;">
-                          Go to Dashboard
-                        </a>
-                      </div>
+                      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin: 32px auto;">
+                        <tr>
+                          <td align="center" style="background-color: #0ea5e9; border-radius: 12px;">
+                            <a href="${FRONTEND_URL}/dashboard" style="display: block; padding: 14px 32px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px; font-family: Arial, sans-serif;">
+                              Go to Dashboard
+                            </a>
+                          </td>
+                        </tr>
+                      </table>
                       
-                      <p style="margin: 24px 0 0; font-size: 14px; line-height: 1.6; color: #64748b;">
+                      <p style="margin: 24px 0 0; font-size: 14px; line-height: 1.6; color: #64748b; font-family: Arial, sans-serif;">
                         If you have any questions, feel free to reply to this email. We're here to help!
                       </p>
                     </td>
@@ -85,11 +97,11 @@ export const sendWelcomeEmail = async (email: string, name: string): Promise<voi
                   
                   <!-- Footer -->
                   <tr>
-                    <td style="padding: 20px 40px; background-color: #f8fafc; border-radius: 0 0 16px 16px; text-align: center;">
-                      <p style="margin: 0; font-size: 12px; color: #94a3b8;">
+                    <td align="center" style="padding: 20px 30px; background-color: #f8fafc; border-radius: 0 0 16px 16px;">
+                      <p style="margin: 0; font-size: 11px; color: #94a3b8; font-family: Arial, sans-serif;">
                         © 2025 ${APP_NAME}. All rights reserved.
                       </p>
-                      <p style="margin: 8px 0 0; font-size: 12px; color: #94a3b8;">
+                      <p style="margin: 8px 0 0; font-size: 11px; color: #94a3b8; font-family: Arial, sans-serif;">
                         <a href="${FRONTEND_URL}/privacy" style="color: #0ea5e9; text-decoration: none;">Privacy Policy</a> | 
                         <a href="${FRONTEND_URL}/terms" style="color: #0ea5e9; text-decoration: none;">Terms of Service</a>
                       </p>
@@ -112,7 +124,7 @@ export const sendWelcomeEmail = async (email: string, name: string): Promise<voi
 };
 
 /**
- * Send password reset email
+ * Send password reset email - GMAIL OPTIMIZED
  */
 export const sendPasswordResetEmail = async (email: string, resetToken: string): Promise<void> => {
   const resetUrl = `${FRONTEND_URL}/reset-password?token=${resetToken}`;
@@ -129,47 +141,59 @@ export const sendPasswordResetEmail = async (email: string, resetToken: string):
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
         </head>
-        <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8fafc;">
-          <table role="presentation" style="width: 100%; border-collapse: collapse;">
+        <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f8fafc;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f8fafc;">
             <tr>
-              <td align="center" style="padding: 40px 0;">
-                <table role="presentation" style="width: 600px; max-width: 90%; background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+              <td align="center" style="padding: 40px 20px;">
+                <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width: 600px; background-color: #ffffff; border-radius: 16px;">
                   <!-- Header -->
                   <tr>
-                    <td style="padding: 40px 40px 20px; text-align: center;">
-                      <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border-radius: 16px; margin: 0 auto 20px; display: inline-flex; align-items: center; justify-content: center;">
-                        <span style="color: white; font-size: 32px;">🔒</span>
-                      </div>
-                      <h1 style="margin: 0; font-size: 28px; font-weight: 700; color: #0f172a;">Reset Your Password</h1>
+                    <td align="center" style="padding: 40px 30px 20px;">
+                      <table cellpadding="0" cellspacing="0" border="0">
+                        <tr>
+                          <td align="center" style="background-color: #ef4444; width: 60px; height: 60px; border-radius: 12px;">
+                            <span style="color: #ffffff; font-size: 32px; line-height: 60px;">🔒</span>
+                          </td>
+                        </tr>
+                      </table>
+                      <h1 style="margin: 20px 0 0; font-size: 28px; font-weight: 700; color: #0f172a; font-family: Arial, sans-serif;">Reset Your Password</h1>
                     </td>
                   </tr>
                   
                   <!-- Content -->
                   <tr>
-                    <td style="padding: 0 40px 40px;">
-                      <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: #475569;">
+                    <td style="padding: 0 30px 30px;">
+                      <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: #475569; font-family: Arial, sans-serif;">
                         We received a request to reset your password for your ${APP_NAME} account.
                       </p>
-                      <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: #475569;">
+                      <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: #475569; font-family: Arial, sans-serif;">
                         Click the button below to choose a new password:
                       </p>
                       
                       <!-- CTA Button -->
-                      <div style="text-align: center; margin: 32px 0;">
-                        <a href="${resetUrl}" style="display: inline-block; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 12px; font-weight: 600; font-size: 16px;">
-                          Reset Password
-                        </a>
-                      </div>
+                      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin: 32px auto;">
+                        <tr>
+                          <td align="center" style="background-color: #ef4444; border-radius: 12px;">
+                            <a href="${resetUrl}" style="display: block; padding: 14px 32px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px; font-family: Arial, sans-serif;">
+                              Reset Password
+                            </a>
+                          </td>
+                        </tr>
+                      </table>
                       
                       <!-- Security Notice -->
-                      <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 8px; margin: 24px 0;">
-                        <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #92400e;">
-                          <strong>⚠️ Security Notice:</strong><br>
-                          This link will expire in <strong>1 hour</strong> for your security.
-                        </p>
-                      </div>
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 8px; margin: 24px 0;">
+                        <tr>
+                          <td style="padding: 16px;">
+                            <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #92400e; font-family: Arial, sans-serif;">
+                              <strong>⚠️ Security Notice:</strong><br>
+                              This link will expire in <strong>1 hour</strong> for your security.
+                            </p>
+                          </td>
+                        </tr>
+                      </table>
                       
-                      <p style="margin: 24px 0 0; font-size: 14px; line-height: 1.6; color: #64748b;">
+                      <p style="margin: 24px 0 0; font-size: 14px; line-height: 1.6; color: #64748b; font-family: Arial, sans-serif;">
                         If you didn't request a password reset, you can safely ignore this email. Your password will not be changed.
                       </p>
                     </td>
@@ -177,8 +201,8 @@ export const sendPasswordResetEmail = async (email: string, resetToken: string):
                   
                   <!-- Footer -->
                   <tr>
-                    <td style="padding: 20px 40px; background-color: #f8fafc; border-radius: 0 0 16px 16px; text-align: center;">
-                      <p style="margin: 0; font-size: 12px; color: #94a3b8;">
+                    <td align="center" style="padding: 20px 30px; background-color: #f8fafc; border-radius: 0 0 16px 16px;">
+                      <p style="margin: 0; font-size: 11px; color: #94a3b8; font-family: Arial, sans-serif;">
                         © 2025 ${APP_NAME}. All rights reserved.
                       </p>
                     </td>
@@ -200,7 +224,7 @@ export const sendPasswordResetEmail = async (email: string, resetToken: string):
 };
 
 /**
- * Send payment receipt email (for future use)
+ * Send payment receipt email (for future use) - GMAIL OPTIMIZED
  */
 export const sendPaymentReceiptEmail = async (
   email: string,
@@ -221,57 +245,69 @@ export const sendPaymentReceiptEmail = async (
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
         </head>
-        <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8fafc;">
-          <table role="presentation" style="width: 100%; border-collapse: collapse;">
+        <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f8fafc;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f8fafc;">
             <tr>
-              <td align="center" style="padding: 40px 0;">
-                <table role="presentation" style="width: 600px; max-width: 90%; background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+              <td align="center" style="padding: 40px 20px;">
+                <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width: 600px; background-color: #ffffff; border-radius: 16px;">
                   <!-- Header -->
                   <tr>
-                    <td style="padding: 40px 40px 20px; text-align: center;">
-                      <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 16px; margin: 0 auto 20px; display: inline-flex; align-items: center; justify-content: center;">
-                        <span style="color: white; font-size: 32px;">✓</span>
-                      </div>
-                      <h1 style="margin: 0; font-size: 28px; font-weight: 700; color: #0f172a;">Payment Successful!</h1>
+                    <td align="center" style="padding: 40px 30px 20px;">
+                      <table cellpadding="0" cellspacing="0" border="0">
+                        <tr>
+                          <td align="center" style="background-color: #10b981; width: 60px; height: 60px; border-radius: 12px;">
+                            <span style="color: #ffffff; font-size: 32px; line-height: 60px;">✓</span>
+                          </td>
+                        </tr>
+                      </table>
+                      <h1 style="margin: 20px 0 0; font-size: 28px; font-weight: 700; color: #0f172a; font-family: Arial, sans-serif;">Payment Successful!</h1>
                     </td>
                   </tr>
                   
                   <!-- Content -->
                   <tr>
-                    <td style="padding: 0 40px 40px;">
-                      <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: #475569;">
+                    <td style="padding: 0 30px 30px;">
+                      <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: #475569; font-family: Arial, sans-serif;">
                         Hi <strong>${name}</strong>,
                       </p>
-                      <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: #475569;">
+                      <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: #475569; font-family: Arial, sans-serif;">
                         Thank you for your purchase! Your credits have been added to your account.
                       </p>
                       
                       <!-- Receipt Details -->
-                      <div style="background-color: #f8fafc; border-radius: 12px; padding: 24px; margin: 24px 0;">
-                        <table style="width: 100%; border-collapse: collapse;">
-                          <tr>
-                            <td style="padding: 8px 0; font-size: 14px; color: #64748b;">Credits Purchased:</td>
-                            <td style="padding: 8px 0; font-size: 16px; font-weight: 700; color: #0f172a; text-align: right;">${credits.toLocaleString()}</td>
-                          </tr>
-                          <tr>
-                            <td style="padding: 8px 0; font-size: 14px; color: #64748b;">Amount Paid:</td>
-                            <td style="padding: 8px 0; font-size: 16px; font-weight: 700; color: #0f172a; text-align: right;">$${amount.toFixed(2)}</td>
-                          </tr>
-                          <tr>
-                            <td style="padding: 8px 0; border-top: 1px solid #e2e8f0; font-size: 14px; color: #64748b;">Transaction ID:</td>
-                            <td style="padding: 8px 0; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; text-align: right; font-family: monospace;">${transactionId}</td>
-                          </tr>
-                        </table>
-                      </div>
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f8fafc; border-radius: 12px; margin: 24px 0;">
+                        <tr>
+                          <td style="padding: 24px;">
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                              <tr>
+                                <td style="padding: 8px 0; font-size: 14px; color: #64748b; font-family: Arial, sans-serif;">Credits Purchased:</td>
+                                <td style="padding: 8px 0; font-size: 16px; font-weight: 700; color: #0f172a; text-align: right; font-family: Arial, sans-serif;">${credits.toLocaleString()}</td>
+                              </tr>
+                              <tr>
+                                <td style="padding: 8px 0; font-size: 14px; color: #64748b; font-family: Arial, sans-serif;">Amount Paid:</td>
+                                <td style="padding: 8px 0; font-size: 16px; font-weight: 700; color: #0f172a; text-align: right; font-family: Arial, sans-serif;">$${amount.toFixed(2)}</td>
+                              </tr>
+                              <tr>
+                                <td style="padding: 8px 0; border-top: 1px solid #e2e8f0; font-size: 14px; color: #64748b; font-family: Arial, sans-serif;">Transaction ID:</td>
+                                <td style="padding: 8px 0; border-top: 1px solid #e2e8f0; font-size: 11px; color: #64748b; text-align: right; font-family: monospace;">${transactionId}</td>
+                              </tr>
+                            </table>
+                          </td>
+                        </tr>
+                      </table>
                       
                       <!-- CTA Button -->
-                      <div style="text-align: center; margin: 32px 0;">
-                        <a href="${FRONTEND_URL}/dashboard" style="display: inline-block; background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 12px; font-weight: 600; font-size: 16px;">
-                          Start Verifying
-                        </a>
-                      </div>
+                      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin: 32px auto;">
+                        <tr>
+                          <td align="center" style="background-color: #0ea5e9; border-radius: 12px;">
+                            <a href="${FRONTEND_URL}/dashboard" style="display: block; padding: 14px 32px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px; font-family: Arial, sans-serif;">
+                              Start Verifying
+                            </a>
+                          </td>
+                        </tr>
+                      </table>
                       
-                      <p style="margin: 24px 0 0; font-size: 14px; line-height: 1.6; color: #64748b;">
+                      <p style="margin: 24px 0 0; font-size: 14px; line-height: 1.6; color: #64748b; font-family: Arial, sans-serif;">
                         Questions about your purchase? Reply to this email and we'll help you out.
                       </p>
                     </td>
@@ -279,8 +315,8 @@ export const sendPaymentReceiptEmail = async (
                   
                   <!-- Footer -->
                   <tr>
-                    <td style="padding: 20px 40px; background-color: #f8fafc; border-radius: 0 0 16px 16px; text-align: center;">
-                      <p style="margin: 0; font-size: 12px; color: #94a3b8;">
+                    <td align="center" style="padding: 20px 30px; background-color: #f8fafc; border-radius: 0 0 16px 16px;">
+                      <p style="margin: 0; font-size: 11px; color: #94a3b8; font-family: Arial, sans-serif;">
                         © 2025 ${APP_NAME}. All rights reserved.
                       </p>
                     </td>
@@ -302,10 +338,7 @@ export const sendPaymentReceiptEmail = async (
 };
 
 /**
- * Send job completion notification (optional - can be disabled)
- */
-/**
- * Send job completion notification with SPEED EMPHASIS
+ * Send job completion notification - GMAIL OPTIMIZED VERSION
  */
 export const sendJobCompletionEmail = async (
   email: string,
@@ -344,102 +377,119 @@ export const sendJobCompletionEmail = async (
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
         </head>
-        <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8fafc;">
-          <table role="presentation" style="width: 100%; border-collapse: collapse;">
+        <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f8fafc;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f8fafc;">
             <tr>
-              <td align="center" style="padding: 40px 0;">
-                <table role="presentation" style="width: 600px; max-width: 90%; background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+              <td align="center" style="padding: 40px 20px;">
+                <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width: 600px; background-color: #ffffff; border-radius: 16px;">
                   
                   <!-- Header -->
                   <tr>
-                    <td style="padding: 40px 40px 20px; text-align: center;">
-                      <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 16px; margin: 0 auto 20px; display: inline-flex; align-items: center; justify-content: center;">
-                        <span style="color: white; font-size: 32px;">✓</span>
-                      </div>
-                      <h1 style="margin: 0; font-size: 28px; font-weight: 700; color: #0f172a;">✅ Verification Complete!</h1>
-                      <p style="margin: 8px 0 0; font-size: 16px; color: #64748b;">Hi ${name}, your email verification is ready</p>
-                    </td>
-                  </tr>
-                  
-                  <!-- SPEED HIGHLIGHT BOX -->
-                  <tr>
-                    <td style="padding: 0 40px 20px;">
-                      <div style="background: linear-gradient(135deg, #dbeafe 0%, #cffafe 100%); border: 2px solid #bae6fd; border-radius: 20px; padding: 32px; text-align: center;">
-                        <div style="font-size: 48px; margin-bottom: 16px;">⚡</div>
-                        <div style="font-size: 56px; font-weight: 700; background: linear-gradient(135deg, #2563eb 0%, #06b6d4 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0; line-height: 1;">${formatTime(processingTimeSeconds)}</div>
-                        <div style="color: #64748b; font-size: 14px; margin-top: 8px; font-weight: 600;">TOTAL PROCESSING TIME</div>
-                        
-                        <table style="width: 100%; margin-top: 16px;">
-                          <tr>
-                            <td style="padding: 12px; text-align: center;">
-                              <div style="background: white; padding: 12px 24px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); display: inline-block;">
-                                <div style="font-size: 24px; font-weight: 700; color: #0f172a; margin: 0;">${averageSpeed}</div>
-                                <div style="font-size: 12px; color: #64748b; margin-top: 4px;">emails/sec</div>
-                              </div>
-                            </td>
-                            <td style="padding: 12px; text-align: center;">
-                              <div style="background: white; padding: 12px 24px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); display: inline-block;">
-                                <div style="font-size: 24px; font-weight: 700; color: #0f172a; margin: 0;">${totalEmails.toLocaleString()}</div>
-                                <div style="font-size: 12px; color: #64748b; margin-top: 4px;">emails processed</div>
-                              </div>
-                            </td>
-                          </tr>
-                        </table>
-                      </div>
-                    </td>
-                  </tr>
-                  
-                  <!-- File Info -->
-                  <tr>
-                    <td style="padding: 0 40px 20px;">
-                      <div style="background: #f8fafc; border-radius: 16px; padding: 20px; display: flex; align-items: center;">
-                        <div style="background: #e0f2fe; width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; float: left; margin-right: 16px;">📄</div>
-                        <div>
-                          <div style="font-weight: 600; color: #0f172a; font-size: 16px; margin: 0 0 4px 0;">${fileName}</div>
-                          <div style="color: #64748b; font-size: 14px; margin: 0;">Verification completed • ${totalEmails.toLocaleString()} emails</div>
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                  
-                  <!-- Results Grid -->
-                  <tr>
-                    <td style="padding: 0 40px 20px;">
-                      <table style="width: 100%; border-collapse: collapse;">
+                    <td align="center" style="padding: 40px 30px 20px;">
+                      <table cellpadding="0" cellspacing="0" border="0">
                         <tr>
-                          <td style="padding: 10px; width: 33.33%;">
-                            <div style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border-radius: 16px; padding: 20px; text-align: center;">
-                              <div style="font-size: 12px; color: #64748b; font-weight: 600; margin: 0 0 8px 0; text-transform: uppercase;">Valid</div>
-                              <div style="font-size: 36px; font-weight: 700; color: #0f172a; margin: 0 0 4px 0;">${validEmails.toLocaleString()}</div>
-                              <div style="font-size: 14px; color: #64748b; margin: 0;">${validPercentage}% of total</div>
-                            </div>
-                          </td>
-                          <td style="padding: 10px; width: 33.33%;">
-                            <div style="background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); border-radius: 16px; padding: 20px; text-align: center;">
-                              <div style="font-size: 12px; color: #64748b; font-weight: 600; margin: 0 0 8px 0; text-transform: uppercase;">Invalid</div>
-                              <div style="font-size: 36px; font-weight: 700; color: #0f172a; margin: 0 0 4px 0;">${invalidEmails.toLocaleString()}</div>
-                              <div style="font-size: 14px; color: #64748b; margin: 0;">${invalidPercentage}% of total</div>
-                            </div>
-                          </td>
-                          <td style="padding: 10px; width: 33.33%;">
-                            <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 16px; padding: 20px; text-align: center;">
-                              <div style="font-size: 12px; color: #64748b; font-weight: 600; margin: 0 0 8px 0; text-transform: uppercase;">Unknown</div>
-                              <div style="font-size: 36px; font-weight: 700; color: #0f172a; margin: 0 0 4px 0;">${unknownEmails.toLocaleString()}</div>
-                              <div style="font-size: 14px; color: #64748b; margin: 0;">${unknownPercentage}% of total</div>
-                            </div>
+                          <td align="center" style="background-color: #10b981; width: 60px; height: 60px; border-radius: 12px;">
+                            <span style="color: #ffffff; font-size: 32px; line-height: 60px;">✓</span>
                           </td>
                         </tr>
                       </table>
+                      <h1 style="margin: 20px 0 0; font-size: 28px; font-weight: 700; color: #0f172a; font-family: Arial, sans-serif;">Verification Complete!</h1>
+                      <p style="margin: 8px 0 0; font-size: 16px; color: #64748b; font-family: Arial, sans-serif;">Hi ${name}, your email verification is ready</p>
                     </td>
                   </tr>
                   
-                  <!-- CTA Button -->
+                  <!-- Content -->
                   <tr>
-                    <td style="padding: 20px 40px 40px; text-align: center;">
-                      <a href="${downloadUrl}" style="display: inline-block; background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 9999px; font-weight: 600; font-size: 17px; box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.2);">
-                        View Results & Download
-                      </a>
-                      <p style="margin: 16px 0 0; font-size: 14px; color: #64748b;">
+                    <td style="padding: 0 30px 30px;">
+                      
+                      <!-- Speed Highlight Box - SIMPLIFIED -->
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #dbeafe; border-radius: 12px; margin-bottom: 24px;">
+                        <tr>
+                          <td align="center" style="padding: 24px 20px;">
+                            <p style="margin: 0 0 12px; font-size: 48px; line-height: 1;">⚡</p>
+                            <p style="margin: 0; font-size: 42px; font-weight: 700; color: #2563eb; line-height: 1; font-family: Arial, sans-serif;">${formatTime(processingTimeSeconds)}</p>
+                            <p style="margin: 8px 0 0; font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; font-family: Arial, sans-serif;">TOTAL PROCESSING TIME</p>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td style="padding: 0 20px 24px;">
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                              <tr>
+                                <td width="50%" align="center" style="padding: 8px;">
+                                  <p style="margin: 0; font-size: 24px; font-weight: 700; color: #0f172a; font-family: Arial, sans-serif;">${averageSpeed}</p>
+                                  <p style="margin: 4px 0 0; font-size: 11px; color: #64748b; font-family: Arial, sans-serif;">emails/sec</p>
+                                </td>
+                                <td width="50%" align="center" style="padding: 8px;">
+                                  <p style="margin: 0; font-size: 24px; font-weight: 700; color: #0f172a; font-family: Arial, sans-serif;">${totalEmails.toLocaleString()}</p>
+                                  <p style="margin: 4px 0 0; font-size: 11px; color: #64748b; font-family: Arial, sans-serif;">emails processed</p>
+                                </td>
+                              </tr>
+                            </table>
+                          </td>
+                        </tr>
+                      </table>
+                      
+                      <!-- File Info - SIMPLIFIED -->
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f8fafc; border-radius: 12px; margin-bottom: 24px;">
+                        <tr>
+                          <td style="padding: 20px;">
+                            <p style="margin: 0 0 4px; font-weight: 600; color: #0f172a; font-size: 15px; font-family: Arial, sans-serif;">📄 ${fileName}</p>
+                            <p style="margin: 0; color: #64748b; font-size: 13px; font-family: Arial, sans-serif;">Verification completed • ${totalEmails.toLocaleString()} emails</p>
+                          </td>
+                        </tr>
+                      </table>
+                      
+                      <!-- Results - SIMPLIFIED -->
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 24px;">
+                        <tr>
+                          <td width="33%" style="padding: 0 4px;">
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #d1fae5; border-radius: 12px;">
+                              <tr>
+                                <td align="center" style="padding: 16px 8px;">
+                                  <p style="margin: 0 0 4px; font-size: 10px; color: #64748b; font-weight: 600; text-transform: uppercase; font-family: Arial, sans-serif;">VALID</p>
+                                  <p style="margin: 0 0 4px; font-size: 28px; font-weight: 700; color: #0f172a; line-height: 1; font-family: Arial, sans-serif;">${validEmails.toLocaleString()}</p>
+                                  <p style="margin: 0; font-size: 11px; color: #64748b; font-family: Arial, sans-serif;">${validPercentage}%</p>
+                                </td>
+                              </tr>
+                            </table>
+                          </td>
+                          <td width="33%" style="padding: 0 4px;">
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #fee2e2; border-radius: 12px;">
+                              <tr>
+                                <td align="center" style="padding: 16px 8px;">
+                                  <p style="margin: 0 0 4px; font-size: 10px; color: #64748b; font-weight: 600; text-transform: uppercase; font-family: Arial, sans-serif;">INVALID</p>
+                                  <p style="margin: 0 0 4px; font-size: 28px; font-weight: 700; color: #0f172a; line-height: 1; font-family: Arial, sans-serif;">${invalidEmails.toLocaleString()}</p>
+                                  <p style="margin: 0; font-size: 11px; color: #64748b; font-family: Arial, sans-serif;">${invalidPercentage}%</p>
+                                </td>
+                              </tr>
+                            </table>
+                          </td>
+                          <td width="33%" style="padding: 0 4px;">
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #fef3c7; border-radius: 12px;">
+                              <tr>
+                                <td align="center" style="padding: 16px 8px;">
+                                  <p style="margin: 0 0 4px; font-size: 10px; color: #64748b; font-weight: 600; text-transform: uppercase; font-family: Arial, sans-serif;">UNKNOWN</p>
+                                  <p style="margin: 0 0 4px; font-size: 28px; font-weight: 700; color: #0f172a; line-height: 1; font-family: Arial, sans-serif;">${unknownEmails.toLocaleString()}</p>
+                                  <p style="margin: 0; font-size: 11px; color: #64748b; font-family: Arial, sans-serif;">${unknownPercentage}%</p>
+                                </td>
+                              </tr>
+                            </table>
+                          </td>
+                        </tr>
+                      </table>
+                      
+                      <!-- CTA Button -->
+                      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto 16px;">
+                        <tr>
+                          <td align="center" style="background-color: #0ea5e9; border-radius: 50px;">
+                            <a href="${downloadUrl}" style="display: block; padding: 16px 40px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px; font-family: Arial, sans-serif;">
+                              View Results &amp; Download
+                            </a>
+                          </td>
+                        </tr>
+                      </table>
+                      
+                      <p style="margin: 0; font-size: 13px; text-align: center; color: #64748b; font-family: Arial, sans-serif;">
                         Your results are ready to download in CSV format
                       </p>
                     </td>
@@ -447,16 +497,17 @@ export const sendJobCompletionEmail = async (
                   
                   <!-- Footer -->
                   <tr>
-                    <td style="padding: 20px 40px; background-color: #f8fafc; border-radius: 0 0 16px 16px; text-align: center;">
-                      <p style="margin: 0; font-size: 12px; color: #94a3b8;">
+                    <td align="center" style="padding: 20px 30px; background-color: #f8fafc; border-radius: 0 0 16px 16px;">
+                      <p style="margin: 0; font-size: 11px; color: #94a3b8; font-family: Arial, sans-serif;">
                         © 2025 ${APP_NAME}. All rights reserved.
                       </p>
-                      <p style="margin: 8px 0 0; font-size: 12px; color: #94a3b8;">
+                      <p style="margin: 8px 0 0; font-size: 11px; color: #94a3b8; font-family: Arial, sans-serif;">
                         <a href="${FRONTEND_URL}/privacy" style="color: #0ea5e9; text-decoration: none;">Privacy Policy</a> | 
                         <a href="${FRONTEND_URL}/terms" style="color: #0ea5e9; text-decoration: none;">Terms of Service</a>
                       </p>
                     </td>
                   </tr>
+                  
                 </table>
               </td>
             </tr>

@@ -702,8 +702,8 @@ export default function Home() {
         <h3 className="font-semibold mb-4 md:mb-5 text-[14px] md:text-[15px] tracking-tight">Company</h3>
         <ul className="space-y-2 md:space-y-3 text-[13px] md:text-[14px] text-gray-600">
           <li>
-            <Link href="/about" className="hover:text-gray-900 transition-colors duration-200 tracking-tight">
-              About
+            <Link href="/refund" className="hover:text-gray-900 transition-colors duration-200 tracking-tight">
+              Refund Policy
             </Link>
           </li>
           <li>
@@ -712,7 +712,7 @@ export default function Home() {
             </Link>
           </li>
           <li>
-            <Link href="/blog" className="hover:text-gray-900 transition-colors duration-200 tracking-tight">
+            <Link href="/contact" className="hover:text-gray-900 transition-colors duration-200 tracking-tight">
               Blog
             </Link>
           </li>

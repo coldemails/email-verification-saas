@@ -542,11 +542,48 @@ export default function PricingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="py-16 px-6 border-t-2 border-slate-200">
-        <div className="max-w-7xl mx-auto text-center">
-          <p className="text-[15px] text-slate-500">
+      <footer className="py-12 md:py-16 px-4 md:px-8 border-t border-gray-100 bg-gray-50/30">
+        <div className="max-w-[1400px] mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12 mb-8 md:mb-12">
+            <div className="col-span-2 md:col-span-1">
+              <div className="flex items-center gap-3 mb-4 md:mb-5">
+                <div className="w-8 h-8 md:w-9 md:h-9 bg-gradient-to-br from-blue-600 via-violet-500 to-fuchsia-400 rounded-[10px] shadow-sm"></div>
+                <span className="font-semibold text-[15px] md:text-[17px] tracking-tight">OnlyValidEmails</span>
+              </div>
+              <p className="text-gray-600 text-[13px] md:text-[14px] tracking-tight leading-relaxed">
+                The simplest way to verify email addresses.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="font-semibold mb-4 md:mb-5 text-[14px] md:text-[15px] tracking-tight">Product</h3>
+              <ul className="space-y-2 md:space-y-3 text-[13px] md:text-[14px] text-gray-600">
+                <li><Link href="/#features" className="hover:text-gray-900 transition-colors duration-200 tracking-tight">Features</Link></li>
+                <li><Link href="/pricing" className="hover:text-gray-900 transition-colors duration-200 tracking-tight">Pricing</Link></li>
+                <li><Link href="/#faq" className="hover:text-gray-900 transition-colors duration-200 tracking-tight">FAQ</Link></li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="font-semibold mb-4 md:mb-5 text-[14px] md:text-[15px] tracking-tight">Company</h3>
+              <ul className="space-y-2 md:space-y-3 text-[13px] md:text-[14px] text-gray-600">
+                <li><Link href="/contact" className="hover:text-gray-900 transition-colors duration-200 tracking-tight">Contact</Link></li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="font-semibold mb-4 md:mb-5 text-[14px] md:text-[15px] tracking-tight">Legal</h3>
+              <ul className="space-y-2 md:space-y-3 text-[13px] md:text-[14px] text-gray-600">
+                <li><Link href="/privacy" className="hover:text-gray-900 transition-colors duration-200 tracking-tight">Privacy Policy</Link></li>
+                <li><Link href="/terms" className="hover:text-gray-900 transition-colors duration-200 tracking-tight">Terms of Service</Link></li>
+                <li><Link href="/refund" className="hover:text-gray-900 transition-colors duration-200 tracking-tight">Refund Policy</Link></li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="pt-6 md:pt-8 border-t border-gray-200 text-center text-[12px] md:text-[13px] text-gray-500 tracking-tight">
             © 2025 OnlyValidEmails. All rights reserved.
-          </p>
+          </div>
         </div>
       </footer>
     </main>

@@ -247,6 +247,8 @@ export default function ContactUs() {
               <ul className="space-y-2 md:space-y-3 text-[13px] md:text-[14px] text-gray-600">
                 <li><Link href="/privacy" className="hover:text-gray-900 transition-colors duration-200 tracking-tight">Privacy Policy</Link></li>
                 <li><Link href="/terms" className="hover:text-gray-900 transition-colors duration-200 tracking-tight">Terms of Service</Link></li>
+                <li><Link href="/refund" className="hover:text-gray-900 transition-colors duration-200 tracking-tight">Refund Policy</Link></li>
+
               </ul>
             </div>
           </div>

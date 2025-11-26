@@ -112,7 +112,6 @@ verificationQueue.process(CONCURRENCY, async (job) => {
           });
 
           riskyCount++;
-          unknownCount++;
           processedCount++;
           continue;
         }
