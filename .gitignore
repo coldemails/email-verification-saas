@@ -53,3 +53,25 @@ tmp/
 temp/
 uploads/
 results/
+
+# Package manager lock files (keep one, ignore others)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Backup files
+*.backup
+*.bak
+*copy.js
+*copy.ts
+
+# Redis dump
+dump.rdb
+
+# PM2
+.pm2/
+
+# Certificate files
+*.pem
+*.key
+*.crt
