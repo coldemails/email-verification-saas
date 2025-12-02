@@ -1,23 +1,21 @@
-import { SocksClient } from 'socks';
+// UPDATED: Direct SMTP connection (no proxy)
+// Replace backend/src/services/enhancedVerificationService.ts with this
+
 import validator from 'validator';
 import dns from 'dns';
 import { promisify } from 'util';
 import net from 'net';
-import { proxyService } from '../services/proxyService';
 import Redis from 'ioredis';
-
-
 
 const resolveMx = promisify(dns.resolveMx);
 const resolveTxt = promisify(dns.resolveTxt);
 const resolve4 = promisify(dns.resolve4);
 const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
 
-
 interface VerificationResult {
   email: string;
   status: 'VALID' | 'INVALID' | 'UNKNOWN' | 'RISKY';
-  score: number; // 0-100 confidence score
+  score: number;
   checks: {
     syntaxValid: boolean;
     dnsValid: boolean;
@@ -47,373 +45,313 @@ interface VerificationResult {
 }
 
 class EnhancedEmailVerificationService {
-  // Layer 1: Expanded disposable domains (500+ domains)
   private disposableDomains = new Set([
     'tempmail.com', 'guerrillamail.com', '10minutemail.com',
     'mailinator.com', 'throwaway.email', 'temp-mail.org',
     'sharklasers.com', 'spam4.me', 'maildrop.cc', 'yopmail.com',
-    'fakeinbox.com', 'trashmail.com', 'getnada.com', 'mohmal.com',
-    'mintemail.com', 'mytemp.email', 'emailondeck.com', 'anonbox.net',
-    'dispostable.com', 'throwawaymail.com', 'tempinbox.com',
-    // Add more disposable domains here
   ]);
 
-  // Layer 2: Free email providers
   private freeProviders = new Set([
     'gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com',
     'aol.com', 'icloud.com', 'mail.com', 'protonmail.com',
-    'live.com', 'msn.com', 'yahoo.co.in', 'rediffmail.com',
-    'zoho.com', 'gmx.com', 'yandex.com', 'tutanota.com',
   ]);
 
-  // Layer 3: Role-based email prefixes
   private roleAccounts = new Set([
     'admin', 'info', 'support', 'sales', 'contact', 'help',
     'marketing', 'noreply', 'no-reply', 'postmaster', 'webmaster',
-    'billing', 'careers', 'hr', 'legal', 'privacy', 'security',
-    'abuse', 'team', 'hello', 'service', 'accounts',
   ]);
 
-  // Layer 4: Common typo domains
   private typoDomainsMap: Record<string, string> = {
     'gmial.com': 'gmail.com',
     'gmai.com': 'gmail.com',
-    'gmal.com': 'gmail.com',
     'yahooo.com': 'yahoo.com',
-    'yaho.com': 'yahoo.com',
     'outlok.com': 'outlook.com',
-    'hotmial.com': 'hotmail.com',
   };
 
-  // Layer 5: Valid TLDs (top-level domains)
   private validTLDs = new Set([
     'com', 'net', 'org', 'edu', 'gov', 'mil', 'int',
     'co', 'io', 'ai', 'app', 'dev', 'tech', 'xyz',
     'uk', 'us', 'ca', 'au', 'de', 'fr', 'jp', 'cn', 'in',
-    // Add more valid TLDs
   ]);
 
-  // Cache for DNS lookups to improve performance
   private dnsCache = new Map<string, any>();
   private cacheTimeout = 3600000; // 1 hour
 
- /**
- * Get DNS results from Redis cache or perform lookup
- */
-private async getDNSWithCache(
-  domain: string
-): Promise<{ hasARecord: boolean; hasMxRecord: boolean; mxRecords: string[] }> {
-  const cacheKey = `dns:${domain}`;
-  
-  try {
-    // Check Redis cache first
-    const cached = await redis.get(cacheKey);
-    if (cached) {
-      console.log(`📦 DNS cache hit: ${domain}`);
-      return JSON.parse(cached);
-    }
-  } catch (err) {
-    console.log(`⚠️ Redis cache read error:`, err);
-  }
-  
-  // Not cached - do lookup (FIX: Call layer9_validateDNS, NOT getDNSWithCache)
-  const result = await this.layer9_validateDNS(domain); // ✅ FIXED
-  
-  try {
-    // Cache for 1 hour
-    await redis.setex(cacheKey, 3600, JSON.stringify(result));
-    console.log(`💾 DNS cached: ${domain}`);
-  } catch (err) {
-    console.log(`⚠️ Redis cache write error:`, err);
-  }
-  
-  return result;
-}
-
   /**
-   * Main verification method - 12 layers of checks
+   * Main verification method
    */
   async verifyEmail(email: string): Promise<VerificationResult> {
     const startTime = Date.now();
+    email = email.toLowerCase().trim();
 
-    const result: VerificationResult = {
-      email: email.toLowerCase().trim(),
-      status: 'UNKNOWN',
-      score: 0,
-      checks: {
+    // Layer 1: Syntax validation
+    if (!validator.isEmail(email)) {
+      return this.createResult(email, 'INVALID', 0, {
         syntaxValid: false,
-        dnsValid: false,
-        mxValid: false,
-        smtpValid: null,
-        spfValid: null,
-        dkimValid: null,
-        dmarcValid: null,
-        isDisposable: false,
-        isCatchAll: null,
-        isRole: false,
-        isFreeProvider: false,
+        reason: 'Invalid email syntax'
+      });
+    }
+
+    const [localPart, domain] = email.split('@');
+
+    // Layer 2-8: Pre-SMTP checks
+    const isDisposable = this.layer4_checkDisposable(domain);
+    const typoSuggestion = this.layer5_checkTypo(domain);
+    const hasValidTLD = this.layer6_checkTLD(domain);
+    const isRole = this.layer7_checkRoleAccount(localPart);
+    const isFreeProvider = this.layer8_checkFreeProvider(domain);
+
+    if (isDisposable) {
+      return this.createResult(email, 'INVALID', 20, {
+        syntaxValid: true,
+        isDisposable: true,
+        reason: 'Disposable email domain'
+      });
+    }
+
+    if (!hasValidTLD) {
+      return this.createResult(email, 'INVALID', 10, {
+        syntaxValid: true,
         hasValidTLD: false,
+        reason: 'Invalid TLD'
+      });
+    }
+
+    // Layer 9: DNS & MX validation
+    const dnsResult = await this.layer9_validateDNS(domain);
+    if (!dnsResult.hasMxRecord) {
+      return this.createResult(email, 'INVALID', 30, {
+        syntaxValid: true,
+        dnsValid: dnsResult.hasARecord,
+        mxValid: false,
+        reason: 'No MX records found'
+      });
+    }
+
+    // Layer 10-11: SPF & DMARC (optional checks)
+    const spfValid = await this.layer10_checkSPF(domain);
+    const dmarcValid = await this.layer11_checkDMARC(domain);
+
+    // Layer 12: SMTP validation (DIRECT CONNECTION)
+    let smtpValid: boolean | null = null;
+    let isCatchAll: boolean | null = null;
+
+    try {
+      const smtpResult = await this.layer12_validateSMTP(email, dnsResult.mxRecords);
+      smtpValid = smtpResult.isValid;
+      isCatchAll = smtpResult.isCatchAll;
+    } catch (error) {
+      console.log('SMTP check failed:', error);
+      smtpValid = null;
+    }
+
+    // Calculate final status and score
+    let status: 'VALID' | 'INVALID' | 'UNKNOWN' | 'RISKY' = 'UNKNOWN';
+    let score = 50;
+
+    if (smtpValid === true && isCatchAll === false) {
+      status = 'VALID';
+      score = 90;
+      if (isRole) score -= 10;
+      if (isFreeProvider) score -= 5;
+    } else if (smtpValid === false) {
+      status = 'INVALID';
+      score = 20;
+    } else if (isCatchAll === true) {
+      status = 'RISKY';
+      score = 60;
+    }
+
+    return {
+      email,
+      status,
+      score,
+      checks: {
+        syntaxValid: true,
+        dnsValid: dnsResult.hasARecord,
+        mxValid: dnsResult.hasMxRecord,
+        smtpValid,
+        spfValid,
+        dkimValid: null,
+        dmarcValid,
+        isDisposable,
+        isCatchAll,
+        isRole,
+        isFreeProvider,
+        hasValidTLD,
         isGibberish: false,
         isDuplicate: false,
       },
       details: {
-        domain: '',
-        localPart: '',
+        domain,
+        localPart,
+        mxRecords: dnsResult.mxRecords,
+        provider: this.detectProvider(dnsResult.mxRecords),
       },
       verifiedAt: new Date(),
     };
+  }
+
+  // LAYER 12: DIRECT SMTP VALIDATION (NO PROXY)
+  private async layer12_validateSMTP(
+    email: string, 
+    mxRecords: string[]
+  ): Promise<{ isValid: boolean; isCatchAll: boolean }> {
+    if (!mxRecords || mxRecords.length === 0) {
+      return { isValid: false, isCatchAll: false };
+    }
+
+    const mxHost = mxRecords[0];
+    const domain = email.split('@')[1];
 
     try {
-      const [localPart, domain] = result.email.split('@');
-      result.details.localPart = localPart;
-      result.details.domain = domain;
+      // Test 1: Check real email
+      const realEmailResult = await this.performDirectSMTPCheck(email, mxHost);
 
-      // LAYER 1: Syntax Validation
-      result.checks.syntaxValid = this.layer1_validateSyntax(result.email);
-      if (!result.checks.syntaxValid) {
-        result.status = 'INVALID';
-        result.reason = 'Invalid email syntax';
-        result.score = 0;
-        return result;
+      if (realEmailResult === false) {
+        // Real email rejected = INVALID
+        return { isValid: false, isCatchAll: false };
       }
 
-      // LAYER 2: TLD Validation
-      result.checks.hasValidTLD = this.layer2_validateTLD(domain);
-      if (!result.checks.hasValidTLD) {
-        result.status = 'INVALID';
-        result.reason = 'Invalid or uncommon TLD';
-        result.score = 10;
-        return result;
+      // Test 2: Check fake email to detect catch-all
+      const fakeEmail = `nonexistent${Date.now()}@${domain}`;
+      const fakeEmailResult = await this.performDirectSMTPCheck(fakeEmail, mxHost);
+
+      if (realEmailResult === true && fakeEmailResult === true) {
+        // Both accepted = CATCH-ALL
+        return { isValid: true, isCatchAll: true };
       }
 
-      // LAYER 3: Gibberish Detection
-      result.checks.isGibberish = this.layer3_detectGibberish(localPart);
-      if (result.checks.isGibberish) {
-        result.status = 'RISKY';
-        result.reason = 'Email appears to be randomly generated';
-        result.score = 20;
+      if (realEmailResult === true && fakeEmailResult === false) {
+        // Only real accepted = VALID
+        return { isValid: true, isCatchAll: false };
       }
 
-      // LAYER 4: Typo Detection & Correction
-      const suggestedDomain = this.layer4_detectTypos(domain);
-      if (suggestedDomain) {
-        result.reason = `Possible typo detected. Did you mean ${suggestedDomain}?`;
-        result.status = 'INVALID';
-        result.score = 15;
-        return result;
-      }
+      // Uncertain
+      return { isValid: true, isCatchAll: null as any };
 
-      // LAYER 5: Fake Email Pattern Detection
-      if (this.layer5_detectFakePatterns(result.email, localPart, domain)) {
-        result.status = 'INVALID';
-        result.reason = 'Fake or test email pattern detected';
-        result.score = 5;
-        return result;
-      }
-
-      // LAYER 6: Disposable Email Detection
-      result.checks.isDisposable = this.layer6_checkDisposable(domain);
-      if (result.checks.isDisposable) {
-        result.status = 'RISKY';
-        result.reason = 'Disposable/temporary email domain';
-        result.score = 25;
-        return result;
-      }
-
-      // LAYER 7: Role Account Detection
-      result.checks.isRole = this.layer7_checkRoleAccount(localPart);
-      if (result.checks.isRole) {
-        result.status = 'RISKY';
-        result.reason = 'Role-based email account (not personal)';
-        result.score = 60;
-      }
-
-      // LAYER 8: Free Provider Detection
-      result.checks.isFreeProvider = this.layer8_checkFreeProvider(domain);
-      result.details.provider = result.checks.isFreeProvider
-        ? 'Free Provider'
-        : 'Custom Domain';
-
-      // LAYER 9: DNS & MX Record Validation
-      const dnsResults = await this.getDNSWithCache(domain);
-      result.checks.dnsValid = dnsResults.hasARecord;
-      result.checks.mxValid = dnsResults.hasMxRecord;
-      result.details.mxRecords = dnsResults.mxRecords;
-
-      if (!result.checks.mxValid) {
-        result.status = 'INVALID';
-        result.reason = 'No MX records found - domain cannot receive emails';
-        result.score = 0;
-        return result;
-      }
-
-      // LAYER 10: SPF Record Check
-      result.checks.spfValid = await this.layer10_checkSPF(domain);
-      result.details.spfRecord = result.checks.spfValid ? 'Present' : 'Missing';
-
-      // LAYER 11: DMARC Record Check
-      result.checks.dmarcValid = await this.layer11_checkDMARC(domain);
-      result.details.dmarcRecord = result.checks.dmarcValid
-        ? 'Present'
-        : 'Missing';
-
-      // LAYER 12: SMTP Validation (with proxy rotation)
-      // Returns true | false | null
-      result.checks.smtpValid = await this.layer12_validateSMTP(
-        result.email,
-        result.details.mxRecords || []
-      );
-
-      // Calculate final score and status
-      result.score = this.calculateScore(result.checks);
-      result.status = this.determineStatus(result.score, result.checks);
-
-      if (!result.reason) {
-        result.reason = this.getReasonFromScore(result.score);
-      }
-
-      const endTime = Date.now();
-      console.log(
-        `✅ Verified ${result.email} in ${endTime - startTime}ms - Score: ${result.score}`
-      );
-
-      return result;
     } catch (error) {
-      console.error(`❌ Error verifying ${result.email}:`, error);
-      result.status = 'UNKNOWN';
-      result.reason = `Verification error: ${error}`;
-      result.score = 0;
-      return result;
+      console.log('SMTP validation error:', error);
+      return { isValid: null as any, isCatchAll: false };
     }
   }
 
-  // =================== LAYER IMPLEMENTATIONS ===================
+  // NEW: Direct SMTP connection (no proxy)
+  private async performDirectSMTPCheck(email: string, mxHost: string): Promise<boolean> {
+    return new Promise((resolve) => {
+      const socket = net.createConnection(25, mxHost);
+      socket.setTimeout(10000); // 10 second timeout
+      socket.setEncoding('ascii');
 
-  // LAYER 1: Syntax Validation
-  private layer1_validateSyntax(email: string): boolean {
-    if (!validator.isEmail(email)) return false;
+      let buffer = '';
+      const commands = [
+        `EHLO verification.service\r\n`,
+        `MAIL FROM:<verify@verification.service>\r\n`,
+        `RCPT TO:<${email}>\r\n`,
+        `QUIT\r\n`
+      ];
+      let step = 0;
 
-    const parts = email.split('@');
-    if (parts.length !== 2) return false;
+      const cleanup = () => {
+        try { socket.destroy(); } catch {}
+      };
 
-    const [localPart, domain] = parts;
+      socket.on('connect', () => {
+        console.log(`✓ Connected to ${mxHost} for ${email}`);
+      });
 
-    // Check lengths
-    if (localPart.length === 0 || localPart.length > 64) return false;
-    if (domain.length === 0 || domain.length > 255) return false;
+      socket.on('data', (data: string) => {
+        buffer += data;
 
-    // Check for consecutive dots
-    if (email.includes('..')) return false;
+        try {
+          // 220 = server greeting
+          if (buffer.includes('220') && step === 0) {
+            socket.write(commands[0]); // EHLO
+            step++;
+            buffer = '';
+          }
+          // 250 = command accepted
+          else if (buffer.includes('250')) {
+            if (step === 1) {
+              socket.write(commands[1]); // MAIL FROM
+              step++;
+              buffer = '';
+            } else if (step === 2) {
+              socket.write(commands[2]); // RCPT TO
+              step++;
+              buffer = '';
+            } else if (step === 3) {
+              // RCPT TO accepted = email VALID
+              socket.write(commands[3]); // QUIT
+              cleanup();
+              resolve(true);
+            }
+          }
+          // 550/551/553 = email rejected
+          else if (buffer.includes('550') || buffer.includes('551') || buffer.includes('553')) {
+            socket.write(commands[3]); // QUIT
+            cleanup();
+            resolve(false);
+          }
+          // 450/451 = temporary error (rate limiting)
+          else if (buffer.includes('450') || buffer.includes('451')) {
+            socket.write(commands[3]); // QUIT
+            cleanup();
+            console.log('⚠️ Rate limited on', mxHost);
+            resolve(null as any); // Uncertain
+          }
+        } catch (err) {
+          cleanup();
+          resolve(false);
+        }
+      });
 
-    // Check for leading/trailing dots
-    if (localPart.startsWith('.') || localPart.endsWith('.')) return false;
+      socket.on('error', (err) => {
+        cleanup();
+        console.log('Socket error:', err.message);
+        resolve(false);
+      });
 
-    // Check domain has at least one dot
-    if (!domain.includes('.')) return false;
-
-    return true;
+      socket.on('timeout', () => {
+        cleanup();
+        console.log('Socket timeout on', mxHost);
+        resolve(false);
+      });
+    });
   }
 
-  // LAYER 2: TLD Validation
-  private layer2_validateTLD(domain: string): boolean {
-    const tld = domain.split('.').pop()?.toLowerCase();
-    if (!tld) return false;
-
-    // Allow all TLDs for now, but flag uncommon ones
-    return tld.length >= 2 && tld.length <= 6;
-  }
-
-  // LAYER 3: Gibberish Detection
-  private layer3_detectGibberish(localPart: string): boolean {
-    // Remove common patterns
-    const cleanedLocalPart = localPart.replace(/[0-9._-]/g, '');
-
-    if (cleanedLocalPart.length < 3) return false;
-
-    // Check for lack of vowels (possible random string)
-    const vowels = cleanedLocalPart.match(/[aeiou]/gi);
-    const vowelRatio = vowels ? vowels.length / cleanedLocalPart.length : 0;
-
-    // If less than 20% vowels, likely gibberish
-    if (vowelRatio < 0.2) return true;
-
-    // Check for repeating characters
-    const repeatingPattern = /(.)\1{3,}/;
-    if (repeatingPattern.test(cleanedLocalPart)) return true;
-
-    return false;
-  }
-
-  // LAYER 4: Typo Detection
-  private layer4_detectTypos(domain: string): string | null {
-    return this.typoDomainsMap[domain.toLowerCase()] || null;
-  }
-
-  // LAYER 5: Fake Pattern Detection
-  private layer5_detectFakePatterns(
-    email: string,
-    localPart: string,
-    domain: string
-  ): boolean {
-    const fakePatterns = [
-      'test',
-      'fake',
-      'example',
-      'demo',
-      'sample',
-      'dummy',
-      'asdf',
-      'qwerty',
-      'nobody',
-      'noemail',
-      'null',
-      '123456',
-    ];
-
-    // Check local part
-    if (
-      fakePatterns.some((pattern) => localPart.toLowerCase().includes(pattern))
-    ) {
-      return true;
-    }
-
-    // Check fake domains
-    const fakeDomains = [
-      'example.com',
-      'example.org',
-      'test.com',
-      'localhost',
-      'invalid',
-    ];
-    if (fakeDomains.includes(domain.toLowerCase())) {
-      return true;
-    }
-
-    return false;
-  }
-
-  // LAYER 6: Disposable Check
-  private layer6_checkDisposable(domain: string): boolean {
+  // Layer 4: Disposable domain check
+  private layer4_checkDisposable(domain: string): boolean {
     return this.disposableDomains.has(domain.toLowerCase());
   }
 
-  // LAYER 7: Role Account Check
+  // Layer 5: Typo check
+  private layer5_checkTypo(domain: string): string | null {
+    return this.typoDomainsMap[domain.toLowerCase()] || null;
+  }
+
+  // Layer 6: Valid TLD check
+  private layer6_checkTLD(domain: string): boolean {
+    const tld = domain.split('.').pop()?.toLowerCase();
+    return tld ? this.validTLDs.has(tld) : false;
+  }
+
+  // Layer 7: Role account check
   private layer7_checkRoleAccount(localPart: string): boolean {
     return this.roleAccounts.has(localPart.toLowerCase());
   }
 
-  // LAYER 8: Free Provider Check
+  // Layer 8: Free provider check
   private layer8_checkFreeProvider(domain: string): boolean {
     return this.freeProviders.has(domain.toLowerCase());
   }
 
-  // LAYER 9: DNS & MX Validation
+  // Layer 9: DNS & MX validation
   private async layer9_validateDNS(
     domain: string
   ): Promise<{ hasARecord: boolean; hasMxRecord: boolean; mxRecords: string[] }> {
     const cacheKey = `dns_${domain}`;
 
-    // Check cache
     if (this.dnsCache.has(cacheKey)) {
       const cached = this.dnsCache.get(cacheKey);
       if (Date.now() - cached.timestamp < this.cacheTimeout) {
@@ -422,16 +360,14 @@ private async getDNSWithCache(
     }
 
     try {
-      // Check A record
       let hasARecord = false;
       try {
         const addresses = await resolve4(domain);
         hasARecord = addresses && addresses.length > 0;
-      } catch (error) {
+      } catch {
         hasARecord = false;
       }
 
-      // Check MX records
       let hasMxRecord = false;
       let mxRecords: string[] = [];
 
@@ -439,25 +375,19 @@ private async getDNSWithCache(
         const mxResults = await resolveMx(domain);
         hasMxRecord = mxResults && mxResults.length > 0;
         mxRecords = mxResults.map((mx) => mx.exchange);
-      } catch (error) {
+      } catch {
         hasMxRecord = false;
       }
 
       const result = { hasARecord, hasMxRecord, mxRecords };
-
-      // Cache result
-      this.dnsCache.set(cacheKey, {
-        data: result,
-        timestamp: Date.now(),
-      });
-
+      this.dnsCache.set(cacheKey, { data: result, timestamp: Date.now() });
       return result;
-    } catch (error) {
+    } catch {
       return { hasARecord: false, hasMxRecord: false, mxRecords: [] };
     }
   }
 
-  // LAYER 10: SPF Check
+  // Layer 10: SPF check
   private async layer10_checkSPF(domain: string): Promise<boolean> {
     try {
       const txtRecords = await resolveTxt(domain);
@@ -465,12 +395,12 @@ private async getDNSWithCache(
         record.join('').startsWith('v=spf1')
       );
       return !!spfRecord;
-    } catch (error) {
+    } catch {
       return false;
     }
   }
 
-  // LAYER 11: DMARC Check
+  // Layer 11: DMARC check
   private async layer11_checkDMARC(domain: string): Promise<boolean> {
     try {
       const dmarcDomain = `_dmarc.${domain}`;
@@ -479,233 +409,58 @@ private async getDNSWithCache(
         record.join('').startsWith('v=DMARC1')
       );
       return !!dmarcRecord;
-    } catch (error) {
+    } catch {
       return false;
     }
   }
 
-  // LAYER 12: SMTP Validation (Will implement with proxies in production)
-  // Returns: true (valid), false (invalid), or null (couldn't run)
-  private async layer12_validateSMTP(email: string, mxRecords: string[]): Promise<boolean | null> {
-    if (!mxRecords || mxRecords.length === 0) {
-      console.log("⚠️ No MX records — skipping SMTP check");
-      return false;
-    }
+  // Helper: Detect email provider from MX records
+  private detectProvider(mxRecords: string[]): string | undefined {
+    if (!mxRecords || mxRecords.length === 0) return undefined;
 
-    const domain = email.split("@")[1];
-
-    // Get a healthy proxy from proxyService
-    let proxy: string | null = null;
-    try {
-      proxy = await proxyService.getHealthyProxy();
-    } catch (err) {
-      console.error("Error getting proxy:", err);
-      proxy = null;
-    }
-
-    if (!proxy) {
-      console.log("⛔ No working proxies available — skipping SMTP check (returning null)");
-      return null;
-    }
-
-    console.log(`🔌 Using proxy for SMTP: ${proxy}`);
-
-    // Choose primary MX host (highest priority is first in array)
-    const mxHost = mxRecords[0];
-
-    try {
-      const smtpResponse = await this.performSMTPCheck(email, mxHost, proxy);
-
-      if (smtpResponse) {
-        await proxyService.markProxySuccessful(proxy);
-        return true;
-      } else {
-        await proxyService.markProxyFailed(proxy);
-        return false;
-      }
-    } catch (err) {
-      console.log("SMTP check failed for proxy:", proxy, err);
-      try { await proxyService.markProxyFailed(proxy); } catch {}
-      return false;
-    }
+    const mx = mxRecords[0].toLowerCase();
+    if (mx.includes('google') || mx.includes('gmail')) return 'Google Workspace';
+    if (mx.includes('outlook') || mx.includes('microsoft')) return 'Microsoft 365';
+    if (mx.includes('zoho')) return 'Zoho';
+    if (mx.includes('protonmail')) return 'ProtonMail';
+    return undefined;
   }
 
-  // NOTE: This now uses SOCKS5 proxy tunneling for SMTP verification.
-
-  // you'd need a proxy-aware socket (e.g., using `socks` package or spawn proxytunnel).
-// Helper: Connect to SMTP server through SOCKS5 proxy and check mailbox existence
-private async performSMTPCheck(email: string, mxHost: string, proxy: string): Promise<boolean> {
-  // Parse proxy format: "user:pass@ip:port" OR "ip:port"
-  const parseProxy = (p: string) => {
-    p = p.replace(/^socks5:\/\//i, '').trim();
-    
-    const atIndex = p.indexOf('@');
-    let creds = null;
-    let hostPort = p;
-
-    if (atIndex !== -1) {
-      creds = p.slice(0, atIndex);
-      hostPort = p.slice(atIndex + 1);
-    }
-
-    const [user, pass] = creds ? creds.split(':') : [undefined, undefined];
-    const [host, portStr] = hostPort.split(':');
-    const port = Number(portStr || 1080);
-
-    return { host, port, user, pass };
-  };
-
-  const { host: proxyHost, port: proxyPort, user: proxyUser, pass: proxyPass } = parseProxy(proxy);
-
-  try {
-    // Create SOCKS5 tunnel to MX host (port 25)
-    const info = await SocksClient.createConnection({
-      command: 'connect',
-      destination: { host: mxHost, port: 25 },
-      proxy: {
-        host: proxyHost,
-        port: proxyPort,
-        type: 5,
-        userId: proxyUser,
-        password: proxyPass,
-      },
-      timeout: 2000,
-    });
-
-    const socket: import('net').Socket = info.socket as any;
-    socket.setEncoding('ascii');
-    socket.setTimeout(3000);
-
-    return await new Promise<boolean>((resolve) => {
-      const commands = [
-        `HELO ${mxHost}\r\n`,
-        `MAIL FROM:<verify@${mxHost}>\r\n`,
-        `RCPT TO:<${email}>\r\n`,
-        `QUIT\r\n`
-      ];
-
-      let step = 0;
-      let buffer = '';
-
-      const cleanup = () => {
-        try { socket.destroy(); } catch {}
-      };
-
-      socket.on('data', (data: string) => {
-        buffer += data;
-
-        try {
-          // 220 = server greeting
-          if (buffer.includes('220') && step === 0) {
-            socket.write(commands[0]);
-            step++;
-            buffer = '';
-            return;
-          }
-
-          // MAIL FROM accepted
-          if (buffer.includes('250') && step === 1) {
-            socket.write(commands[1]);
-            step++;
-            buffer = '';
-            return;
-          }
-
-          // RCPT TO
-          if (buffer.includes('250') && step === 2) {
-            socket.write(commands[2]);
-            step++;
-            buffer = '';
-            return;
-          }
-
-          // RCPT accepted → mailbox exists
-          if (buffer.includes('250') && step === 3) {
-            socket.write(commands[3]);
-            cleanup();
-            return resolve(true);
-          }
-
-          // 550 — mailbox does NOT exist
-          if (buffer.includes('550')) {
-            cleanup();
-            return resolve(false);
-          }
-
-          // Temporary error (451, 452) → treat as fail
-          if (buffer.match(/45\d/)) {
-            cleanup();
-            return resolve(false);
-          }
-
-        } catch (err) {
-          cleanup();
-          return resolve(false);
-        }
-      });
-
-      socket.on('error', () => { cleanup(); return resolve(false); });
-      socket.on('timeout', () => { cleanup(); return resolve(false); });
-      socket.on('end', () => { cleanup(); return resolve(false); });
-
-      // Safety timeout
-      setTimeout(() => { 
-        cleanup(); 
-        return resolve(false);
-      }, 3500); // Line 616
-
-    });
-
-  } catch (err) {
-    console.error('SOCKS5 connection error:', err);
-    return false;
-  }
-}
-
-
-
-
-  // =================== SCORING & STATUS ===================
-
-  private calculateScore(checks: VerificationResult['checks']): number {
-    let score = 0;
-
-    if (checks.syntaxValid) score += 10;
-    if (checks.hasValidTLD) score += 5;
-    if (!checks.isGibberish) score += 10;
-    if (!checks.isDisposable) score += 15;
-    if (!checks.isRole) score += 10;
-    if (checks.dnsValid) score += 10;
-    if (checks.mxValid) score += 20;
-    if (checks.spfValid) score += 10;
-    if (checks.dmarcValid) score += 10;
-
-    // Bonus for custom domains (not free providers)
-    if (!checks.isFreeProvider) score += 5;
-
-    return Math.min(score, 100);
-  }
-
-  private determineStatus(
+  // Helper: Create result object
+  private createResult(
+    email: string,
+    status: 'VALID' | 'INVALID' | 'UNKNOWN' | 'RISKY',
     score: number,
-    checks: VerificationResult['checks']
-  ): 'VALID' | 'INVALID' | 'RISKY' | 'UNKNOWN' {
-    if (score === 0) return 'INVALID';
-    if (checks.isDisposable || checks.isGibberish) return 'RISKY';
-    if (checks.isRole) return 'RISKY';
-    if (score >= 80) return 'VALID';
-    if (score >= 60) return 'RISKY';
-    if (score >= 40) return 'UNKNOWN';
-    return 'INVALID';
-  }
-
-  private getReasonFromScore(score: number): string {
-    if (score >= 90) return 'High confidence - email is valid';
-    if (score >= 80) return 'Good confidence - email appears valid';
-    if (score >= 70) return 'Moderate confidence - email likely valid';
-    if (score >= 60) return 'Low confidence - email may be valid';
-    if (score >= 40) return 'Very low confidence - verification incomplete';
-    return 'Email appears invalid or risky';
+    overrides: Partial<VerificationResult['checks'] & { reason?: string }>
+  ): VerificationResult {
+    const [localPart, domain] = email.split('@');
+    return {
+      email,
+      status,
+      score,
+      checks: {
+        syntaxValid: overrides.syntaxValid ?? false,
+        dnsValid: overrides.dnsValid ?? false,
+        mxValid: overrides.mxValid ?? false,
+        smtpValid: overrides.smtpValid ?? null,
+        spfValid: overrides.spfValid ?? null,
+        dkimValid: null,
+        dmarcValid: overrides.dmarcValid ?? null,
+        isDisposable: overrides.isDisposable ?? false,
+        isCatchAll: overrides.isCatchAll ?? null,
+        isRole: overrides.isRole ?? false,
+        isFreeProvider: overrides.isFreeProvider ?? false,
+        hasValidTLD: overrides.hasValidTLD ?? false,
+        isGibberish: false,
+        isDuplicate: false,
+      },
+      details: {
+        domain,
+        localPart,
+      },
+      reason: overrides.reason,
+      verifiedAt: new Date(),
+    };
   }
 }
 
